@@ -1,0 +1,38 @@
+.cap-icon.tool {
+  background: #eaf2ff;
+  color: #3475d4;
+}
+
+.tool-source {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  border-radius: 7px;
+  background: #f7f9fc;
+  margin: 14px 0 8px;
+}
+
+.tool-source span {
+  font-size: 8px;
+  font-weight: 800;
+  color: #8a95a6;
+  letter-spacing: .5px;
+}
+
+.tool-source code {
+  font-size: 9px;
+  color: #3475d4;
+}
+
+.tool-card .model-row {
+  min-height: 27px;
+  margin-top: 8px;
+}
+
+.json-input {
+  font: 11px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  background: #17202d;
+  color: #d5ddeb;
+  border-color: #273244;
+}

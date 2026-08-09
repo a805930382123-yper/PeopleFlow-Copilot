@@ -1,0 +1,20 @@
+{
+  "active": true,
+  "provider": "openai-compatible",
+  "profile_id": "deepseek",
+  "model": "deepseek-v4-pro",
+  "base_url": "https://api.deepseek.com",
+  "api_path": "/chat/completions",
+  "json_mode": "auto",
+  "timeout_ms": 60000,
+  "max_retries": 1,
+  "updated_at": "2026-08-03T14:36:59.645Z",
+  "last_test": {
+    "ok": true,
+    "provider": "openai-compatible",
+    "model": "deepseek-v4-pro",
+    "duration_ms": 3002,
+    "tested_at": "2026-08-04T16:00:58.360Z",
+    "error": null
+  }
+}

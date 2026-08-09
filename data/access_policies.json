@@ -1,0 +1,4 @@
+[
+  { "id": "self_service", "role": "employee", "allowed_scope": "self", "description": "员工只能访问本人入职信息和公开入职知识。" },
+  { "id": "sensitive_escalation", "role": "employee", "topics": ["薪资", "社保个人明细", "公积金个人明细", "劳动合同争议", "离职争议", "账号权限"], "action": "handoff", "description": "高敏感或需要个案判断的事项转交有权限的 HR、IT 或法务。" }
+]

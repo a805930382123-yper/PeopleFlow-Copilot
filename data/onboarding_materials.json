@@ -1,0 +1,9 @@
+[
+  {"id":"M001","name":"本人有效身份证件","required":true,"applies_to":["all"],"purpose":"身份核验与人事档案建立","submission_channel":"HR 指定的人事系统或现场核验","note":"不要通过普通聊天工具发送证件完整照片。"},
+  {"id":"M002","name":"学历与学位证明","required":true,"applies_to":["all"],"purpose":"核验录用条件与建立员工档案","submission_channel":"HR 指定的人事系统","note":"按 HR 通知提交扫描件，必要时携带原件核验。"},
+  {"id":"M003","name":"上一家单位离职证明","required":true,"applies_to":["all"],"purpose":"确认劳动关系状态","submission_channel":"HR 指定的人事系统或现场提交","note":"应届毕业生或经 HR 确认无需提供的人员除外。"},
+  {"id":"M004","name":"本人银行卡信息","required":true,"applies_to":["all"],"purpose":"工资发放账户登记","submission_channel":"HR 指定的薪酬系统","note":"仅提交本人账户，禁止通过群聊或非授权渠道发送。"},
+  {"id":"M005","name":"社保与公积金办理信息","required":false,"applies_to":["all"],"purpose":"属地社保及公积金办理","submission_channel":"HR 指定的人事系统","note":"是否需要补充材料以工作地和 HR 通知为准。"},
+  {"id":"M006","name":"证件照与紧急联系人信息","required":false,"applies_to":["all"],"purpose":"工牌制作及紧急联络登记","submission_channel":"HR 指定的人事系统","note":"照片规格和字段要求以入职通知为准。"},
+  {"id":"M007","name":"录用通知中列明的岗位专项材料","required":false,"applies_to":["all"],"purpose":"满足岗位资质或合规要求","submission_channel":"按录用通知提交","note":"如职业资格证、健康证明等，仅在岗位明确要求时提供。"}
+]

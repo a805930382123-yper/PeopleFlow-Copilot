@@ -1,0 +1,209 @@
+[
+  {
+    "id": "default_onboarding_plan",
+    "name": "企业入职助手默认 Plan",
+    "description": "根据问题主题选择 Tool 与 Skill，支持依赖、条件和失败重试。",
+    "enabled": true,
+    "nodes": [
+      {
+        "id": "identify",
+        "kind": "skill",
+        "capability_id": "question_structuring",
+        "goal": "识别用户意图与必要数据查询",
+        "condition": "always",
+        "depends_on": [],
+        "retry": 0
+      },
+      {
+        "id": "employee",
+        "kind": "tool",
+        "capability_id": "employee_lookup",
+        "goal": "查询员工身份、岗位与入职状态",
+        "condition": "always",
+        "depends_on": [
+          "identify"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "knowledge",
+        "kind": "tool",
+        "capability_id": "knowledge_lookup",
+        "goal": "从统一入职知识库检索带来源的证据卡片",
+        "condition": "always",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "materials",
+        "kind": "tool",
+        "capability_id": "material_lookup",
+        "goal": "查询入职报到所需材料及安全提交要求",
+        "condition": "materials",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "tasks",
+        "kind": "tool",
+        "capability_id": "task_lookup",
+        "goal": "查询匹配的入职任务",
+        "condition": "task",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "task_status",
+        "kind": "tool",
+        "capability_id": "task_status",
+        "goal": "计算进度、逾期和依赖",
+        "condition": "task",
+        "depends_on": [
+          "tasks"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "task_decision",
+        "kind": "skill",
+        "capability_id": "task_decision",
+        "goal": "推荐下一步任务",
+        "condition": "task",
+        "depends_on": [
+          "knowledge",
+          "tasks",
+          "task_status"
+        ],
+        "retry": 0
+      },
+      {
+        "id": "policy",
+        "kind": "tool",
+        "capability_id": "policy_lookup",
+        "goal": "检索当前生效制度",
+        "condition": "policy",
+        "depends_on": [
+          "identify"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "policy_qa",
+        "kind": "skill",
+        "capability_id": "policy_qa",
+        "goal": "基于制度生成解释",
+        "condition": "policy",
+        "depends_on": [
+          "knowledge",
+          "policy"
+        ],
+        "retry": 0
+      },
+      {
+        "id": "training",
+        "kind": "tool",
+        "capability_id": "training_lookup",
+        "goal": "查询匹配培训",
+        "condition": "training",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "contact",
+        "kind": "tool",
+        "capability_id": "contact_lookup",
+        "goal": "查询有权联系的负责人",
+        "condition": "contact",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 1
+      },
+      {
+        "id": "coze",
+        "kind": "tool",
+        "capability_id": "run_coze_workflow_7659350798523416603",
+        "goal": "运行 Coze 工作流",
+        "condition": "coze",
+        "depends_on": [
+          "employee"
+        ],
+        "retry": 0
+      },
+      {
+        "id": "process",
+        "kind": "skill",
+        "capability_id": "process_explanation",
+        "goal": "组织办理步骤",
+        "condition": "process",
+        "depends_on": [
+          "knowledge"
+        ],
+        "retry": 0
+      },
+      {
+        "id": "reply",
+        "kind": "skill",
+        "capability_id": "reply_generation",
+        "goal": "生成员工侧回复",
+        "condition": "always",
+        "depends_on": [
+          "knowledge"
+        ],
+        "retry": 0
+      },
+      {
+        "id": "review",
+        "kind": "skill",
+        "capability_id": "risk_review",
+        "goal": "执行合规与风险审核",
+        "condition": "always",
+        "depends_on": [
+          "reply"
+        ],
+        "retry": 0
+      }
+    ],
+    "version": "1.0.4",
+    "planner_prompt": "你是企业入职助手的能力编排器。根据员工问题、会话上下文、当前启用的 Skill 和 Tool，选择最小且充分的执行集合。必须保留问题结构化、员工查询、统一知识检索、回复生成和风险审核；根据入职材料、任务、制度、培训、联系人或流程主题选择对应能力。不得选择未启用或不存在的能力。只有用户明确要求 Coze/扣子工作流时才能选择 Coze Tool。输出结构化 JSON，不得编造能力。",
+    "mode": "hybrid",
+    "mandatory_capabilities": [
+      "question_structuring",
+      "employee_lookup",
+      "knowledge_lookup",
+      "reply_generation",
+      "risk_review"
+    ],
+    "allowed_skills": [
+      "question_structuring",
+      "task_decision",
+      "process_explanation",
+      "policy_qa",
+      "reply_generation",
+      "risk_review"
+    ],
+    "allowed_tools": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603",
+      "employee_lookup",
+      "task_lookup",
+      "contact_lookup",
+      "policy_lookup",
+      "training_lookup",
+      "material_lookup",
+      "task_status"
+    ],
+    "max_nodes": 14,
+    "risk_strategy": "敏感人事问题必须经过风险审核；高风险转人工，严重风险阻断。",
+    "fallback_strategy": "能力不足或计划非法时安全降级并转人工，不得伪装成功。",
+    "updated_at": "2026-08-04T16:55:13.476Z"
+  }
+]

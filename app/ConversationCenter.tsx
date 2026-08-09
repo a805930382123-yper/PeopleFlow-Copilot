@@ -1,0 +1,34 @@
+"use client";
+
+import { useMemo, useState } from "react";
+
+type Message = { id?: string; execution_id?: string; role: string; content: string; risk_level?: string; created_at: string };
+export type ConversationRecord = { id: string; employee_id: string; name: string; status?: "active" | "archived"; messages: Message[]; created_at?: string; updated_at: string };
+export type ConversationFeedback = { id: string; conversation_id: string; message_id: string; rating: "up" | "down"; tags?: string[]; comment?: string };
+type Employee = { id: string; name: string; department: string };
+type Request = (path: string, options?: RequestInit) => Promise<unknown>;
+
+export default function ConversationCenter({ conversations, employees, feedback, request, onReload, onContinue, notify }: { conversations: ConversationRecord[]; employees: Employee[]; feedback: ConversationFeedback[]; request: Request; onReload: () => Promise<void>; onContinue: (conversation: ConversationRecord) => void; notify: (message: string) => void }) {
+  const [selectedId, setSelectedId] = useState(conversations[0]?.id || "");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("active");
+  const effectiveSelectedId = selectedId && conversations.some((item) => item.id === selectedId) ? selectedId : conversations[0]?.id || "";
+  const employeeMap = useMemo(() => new Map(employees.map((item) => [item.id, item])), [employees]);
+  const feedbackMap = useMemo(() => new Map(feedback.map((item) => [`${item.conversation_id}:${item.message_id}`, item])), [feedback]);
+  const visible = useMemo(() => conversations.filter((item) => (status === "all" || (item.status || "active") === status) && (!search.trim() || `${item.name} ${employeeMap.get(item.employee_id)?.name || ""} ${item.messages.map((message) => message.content).join(" ")}`.toLowerCase().includes(search.trim().toLowerCase()))), [conversations, status, search, employeeMap]);
+  const selected = conversations.find((item) => item.id === effectiveSelectedId) || null;
+  const rate = async (message: Message, messageIndex: number, rating: "up" | "down") => {
+    if (!selected) return;
+    const tags = rating === "down" ? ["需要优化", "加入 Bad Case 候选"] : ["回答有帮助"];
+    await request(`/conversations/${selected.id}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message_id: message.id, message_index: messageIndex, rating, tags }) });
+    await onReload(); notify(rating === "up" ? "感谢反馈，已记录为有帮助" : "已记录问题回答，可在评测中心补充为 Bad Case");
+  };
+
+  return <div className="page conversation-center">
+    <div className="page-heading"><div><h1>会话中心</h1><p>查看多轮历史、继续追问、评价回答，并将需要人工确认的问题转入处理队列。</p></div><span className="badge blue">{conversations.length} 个会话</span></div>
+    <div className="conversation-layout">
+      <section className="panel conversation-list-panel"><div className="conversation-filters"><input aria-label="搜索历史会话" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索员工、主题或消息"/><select value={status} onChange={(event) => setStatus(event.target.value)}><option value="active">进行中</option><option value="archived">已归档</option><option value="all">全部</option></select></div><div className="conversation-list">{visible.map((item) => { const employee = employeeMap.get(item.employee_id); const last = item.messages[item.messages.length - 1]; return <button className={effectiveSelectedId === item.id ? "active" : ""} key={item.id} onClick={() => setSelectedId(item.id)}><span className="conversation-avatar">{employee?.name?.slice(0, 1) || "员"}</span><div><strong>{item.name}</strong><p>{last?.content || "暂无消息"}</p><small>{employee?.name || item.employee_id} · {item.messages.length} 条 · {new Date(item.updated_at).toLocaleString("zh-CN")}</small></div>{(item.status || "active") === "archived" && <span className="badge neutral">归档</span>}</button>; })}{!visible.length && <div className="empty-state">暂无符合条件的会话</div>}</div></section>
+      <section className="panel conversation-detail">{selected ? <><header><div><span className="conversation-avatar">{employeeMap.get(selected.employee_id)?.name?.slice(0, 1) || "员"}</span><div><h2>{selected.name}</h2><p>{employeeMap.get(selected.employee_id)?.name || selected.employee_id} · {selected.id}</p></div></div><div className="conversation-detail-actions"><button onClick={() => onContinue(selected)}>继续对话</button><button onClick={async () => { const nextName = prompt("输入新的会话名称", selected.name)?.trim(); if (!nextName) return; await request(`/conversations/${selected.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: nextName, status: selected.status || "active" }) }); await onReload(); notify("会话名称已更新"); }}>重命名</button><button onClick={async () => { await request(`/conversations/${selected.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: selected.name, status: (selected.status || "active") === "active" ? "archived" : "active" }) }); await onReload(); notify((selected.status || "active") === "active" ? "会话已归档" : "会话已恢复"); }}>{(selected.status || "active") === "active" ? "归档" : "恢复"}</button></div></header><div className="conversation-messages">{selected.messages.map((message, index) => { const storedFeedback = message.id ? feedbackMap.get(`${selected.id}:${message.id}`) : null; return <article className={`conversation-message ${message.role}`} key={message.id || `${message.role}-${index}`}><div className="message-meta"><strong>{message.role === "assistant" ? "入职小助手" : employeeMap.get(selected.employee_id)?.name || "员工"}</strong><span>{new Date(message.created_at).toLocaleString("zh-CN")}</span>{message.risk_level && <span className={`badge ${message.risk_level === "high" ? "red" : "green"}`}>{message.risk_level}</span>}</div><p>{message.content}</p>{message.role === "assistant" && <div className="message-feedback"><span>这条回答有帮助吗？</span><button className={storedFeedback?.rating === "up" ? "selected" : ""} onClick={() => rate(message, index, "up")}>有帮助</button><button className={storedFeedback?.rating === "down" ? "selected negative" : ""} onClick={() => rate(message, index, "down")}>需改进</button></div>}</article>; })}</div><footer><button className="secondary" onClick={async () => { await request(`/conversations/${selected.id}/handoff`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); await onReload(); notify("已转交 HR 人工处理"); }}>转人工处理</button><button className="danger-link" onClick={async () => { if (!confirm(`确认删除会话“${selected.name}”？`)) return; await request(`/conversations/${selected.id}`, { method: "DELETE" }); await onReload(); notify("会话已删除"); }}>删除会话</button></footer></> : <div className="empty-state">选择左侧会话查看详情</div>}</section>
+    </div>
+  </div>;
+}

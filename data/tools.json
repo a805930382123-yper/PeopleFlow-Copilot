@@ -1,0 +1,991 @@
+[
+  {
+    "id": "knowledge_lookup",
+    "name": "统一入职知识库 Tool",
+    "description": "跨制度、材料、任务和培训数据检索统一知识卡片，并返回来源、版本与生效时间。",
+    "enabled": true,
+    "type": "local",
+    "source": "policies.json + onboarding_materials.json + onboarding_tasks.json + trainings.json",
+    "input_schema": {
+      "employee_id": "string",
+      "query": "string"
+    },
+    "output_schema": {
+      "knowledge_cards": "object[]",
+      "retrieval_summary": "object"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001",
+        "query": "我需要准备哪些入职材料？"
+      },
+      "output": {
+        "mode": "local",
+        "output": {
+          "knowledge_cards": [
+            {
+              "id": "KB-M004",
+              "category": "入职材料",
+              "title": "本人银行卡信息",
+              "content": "工资发放账户登记；提交渠道：HR 指定的薪酬系统；注意：仅提交本人账户，禁止通过群聊或非授权渠道发送。",
+              "source": "onboarding_materials.json",
+              "source_id": "M004",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M001",
+              "category": "入职材料",
+              "title": "本人有效身份证件",
+              "content": "身份核验与人事档案建立；提交渠道：HR 指定的人事系统或现场核验；注意：不要通过普通聊天工具发送证件完整照片。",
+              "source": "onboarding_materials.json",
+              "source_id": "M001",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M007",
+              "category": "入职材料",
+              "title": "录用通知中列明的岗位专项材料",
+              "content": "满足岗位资质或合规要求；提交渠道：按录用通知提交；注意：如职业资格证、健康证明等，仅在岗位明确要求时提供。",
+              "source": "onboarding_materials.json",
+              "source_id": "M007",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M003",
+              "category": "入职材料",
+              "title": "上一家单位离职证明",
+              "content": "确认劳动关系状态；提交渠道：HR 指定的人事系统或现场提交；注意：应届毕业生或经 HR 确认无需提供的人员除外。",
+              "source": "onboarding_materials.json",
+              "source_id": "M003",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M005",
+              "category": "入职材料",
+              "title": "社保与公积金办理信息",
+              "content": "属地社保及公积金办理；提交渠道：HR 指定的人事系统；注意：是否需要补充材料以工作地和 HR 通知为准。",
+              "source": "onboarding_materials.json",
+              "source_id": "M005",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M002",
+              "category": "入职材料",
+              "title": "学历与学位证明",
+              "content": "核验录用条件与建立员工档案；提交渠道：HR 指定的人事系统；注意：按 HR 通知提交扫描件，必要时携带原件核验。",
+              "source": "onboarding_materials.json",
+              "source_id": "M002",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            },
+            {
+              "id": "KB-M006",
+              "category": "入职材料",
+              "title": "证件照与紧急联系人信息",
+              "content": "工牌制作及紧急联络登记；提交渠道：HR 指定的人事系统；注意：照片规格和字段要求以入职通知为准。",
+              "source": "onboarding_materials.json",
+              "source_id": "M006",
+              "version": "local-1",
+              "effective_date": null,
+              "scope": "all",
+              "score": 13
+            }
+          ],
+          "retrieval_summary": {
+            "query": "我需要准备哪些入职材料？",
+            "mode": "hybrid",
+            "total_candidates": 44,
+            "matched_count": 7,
+            "sources": [
+              "onboarding_materials.json"
+            ],
+            "document_retrieval": {
+              "query": "我需要准备哪些入职材料？",
+              "mode": "hybrid",
+              "total_chunks": 202,
+              "active_documents": 40,
+              "matched_count": 0,
+              "embedding": {
+                "provider": "local-hash",
+                "model": "local-chinese-ngram-v1",
+                "dimensions": 192,
+                "configured": true,
+                "semantic": false,
+                "label": "本地字符向量"
+              }
+            }
+          }
+        },
+        "trace": [
+          {
+            "index": 0,
+            "event": "Local",
+            "node_title": "统一入职知识库 Tool",
+            "content": "本地 JSON 查询完成",
+            "timestamp": "2026-08-04T16:56:41.927Z"
+          }
+        ],
+        "request": {
+          "source": "policies.json + onboarding_materials.json + onboarding_tasks.json + trainings.json",
+          "input": {
+            "employee_id": "E001",
+            "query": "我需要准备哪些入职材料？"
+          }
+        },
+        "duration_ms": 4,
+        "interrupt_session": null
+      },
+      "tested_at": "2026-08-04T16:56:41.923Z",
+      "test_id": "TEST-MSEWHEPV-O0FP"
+    },
+    "version": "1.0.0",
+    "updated_at": "2026-08-04T16:56:41.929Z"
+  },
+  {
+    "id": "run_coze_workflow_7659350798523416603",
+    "name": "Coze 入职工作流 Tool",
+    "description": "运行 Coze 工作流 7659350798523416603；优先读取 End，End 为空时读取配置的最终答案节点或结束前最后一条完整消息。",
+    "enabled": true,
+    "type": "coze_workflow",
+    "source": "Coze Workflow 7659350798523416603",
+    "workflow_id": "7659350798523416603",
+    "base_url": "https://api.coze.cn",
+    "auth_env_var": "COZE_API_TOKEN",
+    "timeout_ms": 300000,
+    "answer_node_titles": [
+      "追问后重写输出",
+      "质检通过"
+    ],
+    "input_schema": {
+      "user_id": "string",
+      "CONVERSATION_NAME": "string",
+      "USER_INPUT": "string"
+    },
+    "output_schema": {
+      "answer": "string",
+      "status": "string",
+      "risk_level": "string"
+    },
+    "last_test": {
+      "input": {
+        "user_id": "E001",
+        "CONVERSATION_NAME": "E001",
+        "USER_INPUT": "入职材料"
+      },
+      "output": {
+        "mode": "mock",
+        "output": {
+          "answer": "这是 Coze 工作流 Tool 的模拟结果。",
+          "status": "success",
+          "risk_level": "unknown"
+        },
+        "trace": [
+          {
+            "index": 0,
+            "event": "Done",
+            "node_title": "Mock End",
+            "content": "模拟结果",
+            "timestamp": "2026-07-15T05:43:04.365Z"
+          }
+        ],
+        "request": {
+          "workflow_id": "7659350798523416603",
+          "parameters": {
+            "user_id": "E001",
+            "CONVERSATION_NAME": "E001",
+            "USER_INPUT": "入职材料"
+          }
+        },
+        "duration_ms": 0,
+        "interrupt_session": null
+      },
+      "tested_at": "2026-07-15T05:43:04.365Z",
+      "test_id": "TEST-MRLNM2ZX-QYWF"
+    },
+    "headers": {}
+  },
+  {
+    "id": "employee_lookup",
+    "name": "查询员工信息 Tool",
+    "description": "读取 employees.json，返回当前员工的岗位、部门与入职状态。",
+    "enabled": true,
+    "type": "local",
+    "source": "employees.json",
+    "input_schema": {
+      "employee_id": "string"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001"
+      },
+      "output": {
+        "mode": "local",
+        "output": {
+          "id": "E001",
+          "name": "林晓雨",
+          "department": "产品部",
+          "position": "AI 产品经理",
+          "onboarding_date": "2026-07-11",
+          "manager": "周明远",
+          "hr_partner": "陈思琪",
+          "stage": "day_1",
+          "completed_tasks": [
+            "T001",
+            "T002"
+          ],
+          "account_status": "待激活",
+          "device_status": "待领取",
+          "access_status": "待办理"
+        },
+        "trace": [
+          {
+            "index": 0,
+            "event": "Local",
+            "node_title": "查询员工信息 Tool",
+            "content": "本地 JSON 查询完成",
+            "timestamp": "2026-07-13T07:20:58.626Z"
+          }
+        ],
+        "request": {
+          "source": "employees.json",
+          "input": {
+            "employee_id": "E001"
+          }
+        },
+        "duration_ms": 1,
+        "interrupt_session": null
+      },
+      "tested_at": "2026-07-13T07:20:58.625Z",
+      "test_id": "TEST-MRIW8A9T-B96G"
+    }
+  },
+  {
+    "id": "task_lookup",
+    "name": "查询入职任务 Tool",
+    "description": "按员工、阶段、岗位和部门查询入职任务。",
+    "enabled": true,
+    "type": "local",
+    "source": "onboarding_tasks.json",
+    "input_schema": {
+      "employee_id": "string"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001"
+      },
+      "output": {
+        "mode": "local",
+        "output": [
+          {
+            "id": "T001",
+            "name": "提交个人入职资料",
+            "priority": "P0",
+            "required": true,
+            "stage": "pre_onboarding",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "入职前或当日上午",
+            "deadline_days": 0,
+            "dependencies": [],
+            "description": "提交身份、紧急联系人等入职所需资料，敏感内容仅在授权渠道处理。",
+            "completed": true
+          },
+          {
+            "id": "T002",
+            "name": "签署入职文件",
+            "priority": "P0",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "入职当日上午",
+            "deadline_days": 0,
+            "dependencies": [
+              "T001"
+            ],
+            "description": "确认并签署适用的入职文件。",
+            "completed": true
+          },
+          {
+            "id": "T003",
+            "name": "领取办公电脑并完成签收",
+            "priority": "P0",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "IT 服务台",
+            "recommended_time": "入职当日上午",
+            "deadline_days": 0,
+            "dependencies": [
+              "T002"
+            ],
+            "description": "核对设备编号与配件，完成资产签收。",
+            "completed": false
+          },
+          {
+            "id": "T004",
+            "name": "激活企业邮箱与统一账号",
+            "priority": "P0",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "IT 服务台",
+            "recommended_time": "领取电脑后",
+            "deadline_days": 0,
+            "dependencies": [
+              "T003"
+            ],
+            "description": "设置初始密码并启用多因素验证。",
+            "completed": false
+          },
+          {
+            "id": "T005",
+            "name": "办理门禁与工位",
+            "priority": "P0",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "行政人员",
+            "recommended_time": "入职当日下午",
+            "deadline_days": 0,
+            "dependencies": [
+              "T002"
+            ],
+            "description": "完成门禁权限开通并确认工位位置。",
+            "completed": false
+          },
+          {
+            "id": "T006",
+            "name": "加入部门与项目工作群",
+            "priority": "P1",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "直属领导",
+            "recommended_time": "入职当日",
+            "deadline_days": 1,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "加入与岗位直接相关的企业工作群。",
+            "completed": false
+          },
+          {
+            "id": "T007",
+            "name": "阅读并确认员工手册",
+            "priority": "P1",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "入职后 5 个工作日内",
+            "deadline_days": 5,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "阅读当前生效版员工手册并完成确认。",
+            "completed": false
+          },
+          {
+            "id": "T008",
+            "name": "完成信息安全培训",
+            "priority": "P0",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "信息安全负责人",
+            "recommended_time": "入职后 5 个工作日内",
+            "deadline_days": 5,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "完成课程与测验。",
+            "completed": false
+          },
+          {
+            "id": "T009",
+            "name": "参加新员工启航营",
+            "priority": "P1",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "培训负责人",
+            "recommended_time": "首个可参加场次",
+            "deadline_days": 7,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "了解组织、制度与协作方式。",
+            "completed": false
+          },
+          {
+            "id": "T010",
+            "name": "与直属领导首次沟通",
+            "priority": "P0",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "直属领导",
+            "recommended_time": "入职当日下午",
+            "deadline_days": 1,
+            "dependencies": [
+              "T002"
+            ],
+            "description": "明确团队、岗位职责和首周安排。",
+            "completed": false
+          },
+          {
+            "id": "T012",
+            "name": "登记社保与公积金信息",
+            "priority": "P1",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "按 HR 通知",
+            "deadline_days": 5,
+            "dependencies": [
+              "T001"
+            ],
+            "description": "在授权渠道提交属地办理所需信息。",
+            "completed": false
+          },
+          {
+            "id": "T013",
+            "name": "完成企业文化培训",
+            "priority": "P2",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "培训负责人",
+            "recommended_time": "入职后 7 个工作日内",
+            "deadline_days": 7,
+            "dependencies": [],
+            "description": "参加企业文化与价值观课程。",
+            "completed": false
+          },
+          {
+            "id": "T014",
+            "name": "配置考勤信息",
+            "priority": "P1",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "入职当日",
+            "deadline_days": 1,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "确认考勤组与记录方式。",
+            "completed": false
+          },
+          {
+            "id": "T015",
+            "name": "设置紧急联系人",
+            "priority": "P2",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "HR 对接人",
+            "recommended_time": "入职后 3 个工作日内",
+            "deadline_days": 3,
+            "dependencies": [
+              "T001"
+            ],
+            "description": "通过授权人事渠道登记。",
+            "completed": false
+          },
+          {
+            "id": "T016",
+            "name": "熟悉办公区域与消防通道",
+            "priority": "P1",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "行政人员",
+            "recommended_time": "入职当日",
+            "deadline_days": 1,
+            "dependencies": [
+              "T005"
+            ],
+            "description": "完成办公区域安全指引。",
+            "completed": false
+          },
+          {
+            "id": "T017",
+            "name": "安装岗位必需软件",
+            "priority": "P1",
+            "required": true,
+            "stage": "day_1",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "IT 服务台",
+            "recommended_time": "领取电脑后",
+            "deadline_days": 2,
+            "dependencies": [
+              "T003",
+              "T004"
+            ],
+            "description": "通过企业软件中心安装获批应用。",
+            "completed": false
+          },
+          {
+            "id": "T018",
+            "name": "阅读产品知识库",
+            "priority": "P1",
+            "required": true,
+            "stage": "week_1",
+            "departments": [
+              "产品部",
+              "研发部",
+              "设计部",
+              "市场部",
+              "销售部",
+              "客户成功部"
+            ],
+            "positions": [
+              "all"
+            ],
+            "owner": "直属领导",
+            "recommended_time": "首周内",
+            "deadline_days": 7,
+            "dependencies": [
+              "T004"
+            ],
+            "description": "了解产品定位、用户与核心流程。",
+            "completed": false
+          }
+        ]
+      },
+      "tested_at": "2026-07-11T15:46:02.779Z"
+    }
+  },
+  {
+    "id": "contact_lookup",
+    "name": "查询公司联系人 Tool",
+    "description": "仅返回当前员工有权联系的业务联系人。",
+    "enabled": true,
+    "type": "local",
+    "source": "contacts.json",
+    "input_schema": {
+      "employee_id": "string",
+      "roles": "string[]"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001",
+        "roles": []
+      },
+      "output": {
+        "mode": "local",
+        "output": [
+          {
+            "contact_id": "C001",
+            "name": "陈思琪",
+            "role": "HR 对接人",
+            "department": "人力资源部",
+            "email": "siqi.chen@example.local",
+            "channel": "企业通讯录"
+          },
+          {
+            "contact_id": "C003",
+            "name": "IT 服务台",
+            "role": "IT 服务台",
+            "department": "信息技术部",
+            "email": "it-help@example.local",
+            "channel": "服务台工单"
+          },
+          {
+            "contact_id": "C004",
+            "name": "唐婧",
+            "role": "行政人员",
+            "department": "行政部",
+            "email": "jing.tang@example.local",
+            "channel": "企业通讯录"
+          },
+          {
+            "contact_id": "C005",
+            "name": "许曼",
+            "role": "培训负责人",
+            "department": "人力资源部",
+            "email": "man.xu@example.local",
+            "channel": "企业通讯录"
+          },
+          {
+            "contact_id": "C006",
+            "name": "蒋蕾",
+            "role": "财务报销负责人",
+            "department": "财务部",
+            "email": "lei.jiang@example.local",
+            "channel": "企业通讯录"
+          },
+          {
+            "contact_id": "C007",
+            "name": "罗凯",
+            "role": "信息安全负责人",
+            "department": "信息技术部",
+            "email": "kai.luo@example.local",
+            "channel": "企业通讯录"
+          },
+          {
+            "contact_id": "C008",
+            "name": "周明远",
+            "role": "部门负责人",
+            "department": "产品部",
+            "email": "mingyuan.zhou@example.local",
+            "channel": "企业通讯录"
+          }
+        ],
+        "trace": [
+          {
+            "index": 0,
+            "event": "Local",
+            "node_title": "查询公司联系人 Tool",
+            "content": "本地 JSON 查询完成",
+            "timestamp": "2026-07-13T07:02:58.242Z"
+          }
+        ],
+        "request": {
+          "source": "contacts.json",
+          "input": {
+            "employee_id": "E001",
+            "roles": []
+          }
+        },
+        "duration_ms": 2,
+        "interrupt_session": null
+      },
+      "tested_at": "2026-07-13T07:02:58.239Z",
+      "test_id": "TEST-MRIVL4N3-AUF2"
+    }
+  },
+  {
+    "id": "policy_lookup",
+    "name": "查询制度知识库 Tool",
+    "description": "检索当前生效的最新制度版本。",
+    "enabled": true,
+    "type": "local",
+    "source": "policies.json",
+    "input_schema": {
+      "query": "string"
+    },
+    "last_test": {
+      "input": {
+        "query": "请假"
+      },
+      "output": {
+        "mode": "local",
+        "output": [
+          {
+            "id": "P003",
+            "type": "请假制度",
+            "name": "员工休假管理制度",
+            "version": "4.1",
+            "effective_date": "2026-04-01",
+            "active": true,
+            "scope": "全体员工",
+            "keywords": [
+              "请假",
+              "年假",
+              "病假",
+              "事假"
+            ],
+            "summary": "休假应提前在模拟 OA 提交并由直属领导审批；紧急情况应先联系直属领导和 HR，材料要求以休假类型为准。"
+          }
+        ]
+      },
+      "tested_at": "2026-07-11T15:46:15.661Z"
+    }
+  },
+  {
+    "id": "training_lookup",
+    "name": "查询培训计划 Tool",
+    "description": "按岗位、部门和入职阶段匹配培训。",
+    "enabled": true,
+    "type": "local",
+    "source": "trainings.json",
+    "input_schema": {
+      "employee_id": "string"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001"
+      },
+      "output": {
+        "mode": "local",
+        "output": [
+          {
+            "id": "TR001",
+            "name": "新员工启航营",
+            "type": "通用培训",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "stage": "week_1",
+            "time": "每周三 10:00-12:00",
+            "owner": "许曼",
+            "format": "线上直播",
+            "required": true,
+            "status": "待完成"
+          },
+          {
+            "id": "TR002",
+            "name": "信息安全基础",
+            "type": "信息安全培训",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "stage": "week_1",
+            "time": "入职后 5 个工作日内",
+            "owner": "罗凯",
+            "format": "在线课程与测验",
+            "required": true,
+            "status": "待完成"
+          },
+          {
+            "id": "TR003",
+            "name": "企业文化与价值观",
+            "type": "企业文化培训",
+            "departments": [
+              "all"
+            ],
+            "positions": [
+              "all"
+            ],
+            "stage": "week_1",
+            "time": "每周四 14:00-15:30",
+            "owner": "许曼",
+            "format": "线下工作坊",
+            "required": true,
+            "status": "待完成"
+          },
+          {
+            "id": "TR004",
+            "name": "产品工作方法",
+            "type": "岗位培训",
+            "departments": [
+              "产品部"
+            ],
+            "positions": [
+              "AI 产品经理"
+            ],
+            "stage": "day_30",
+            "time": "入职后第 2 周",
+            "owner": "周明远",
+            "format": "导师带教",
+            "required": true,
+            "status": "待完成"
+          }
+        ]
+      },
+      "tested_at": "2026-07-11T15:46:19.749Z"
+    }
+  },
+  {
+    "id": "material_lookup",
+    "name": "查询入职材料 Tool",
+    "description": "按员工身份查询入职报到材料、适用条件与安全提交渠道。",
+    "enabled": true,
+    "type": "local",
+    "source": "onboarding_materials.json",
+    "input_schema": {
+      "employee_id": "string",
+      "query": "string"
+    }
+  },
+  {
+    "id": "task_status",
+    "name": "入职任务状态计算 Tool",
+    "description": "以代码计算完成率、逾期、依赖和优先级。",
+    "enabled": true,
+    "type": "local",
+    "source": "onboarding_tasks.json",
+    "input_schema": {
+      "employee_id": "string"
+    },
+    "last_test": {
+      "input": {
+        "employee_id": "E001"
+      },
+      "output": {
+        "mode": "local",
+        "output": {
+          "employee_id": "E001",
+          "onboarding_progress": 0.12,
+          "completed_task_count": 2,
+          "pending_task_count": 15,
+          "overdue_task_count": 3,
+          "next_priority_tasks": [
+            "领取办公电脑并完成签收",
+            "办理门禁与工位",
+            "与直属领导首次沟通",
+            "登记社保与公积金信息",
+            "设置紧急联系人"
+          ],
+          "dependency_blocked_tasks": [
+            {
+              "task_id": "T004",
+              "blocked_by": [
+                "T003"
+              ]
+            },
+            {
+              "task_id": "T008",
+              "blocked_by": [
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T006",
+              "blocked_by": [
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T014",
+              "blocked_by": [
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T016",
+              "blocked_by": [
+                "T005"
+              ]
+            },
+            {
+              "task_id": "T017",
+              "blocked_by": [
+                "T003",
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T007",
+              "blocked_by": [
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T009",
+              "blocked_by": [
+                "T004"
+              ]
+            },
+            {
+              "task_id": "T018",
+              "blocked_by": [
+                "T004"
+              ]
+            }
+          ],
+          "can_enter_next_stage": false
+        }
+      },
+      "tested_at": "2026-07-11T15:46:23.919Z"
+    }
+  }
+]

@@ -1,0 +1,45 @@
+PeopleFlow 企业入职助手 · Windows 本地版
+
+首次使用：
+1. 将 .env.example 复制为 .env（已有 .env 可直接使用）。
+2. 按需配置大模型与 Coze Token。
+3. 双击“启动企业入职助手.bat”。
+4. 浏览器将自动打开 http://localhost:3188。
+5. 可以重复双击启动脚本；如果服务已经运行，会直接打开网页。
+
+通用大模型配置（OpenAI-Compatible）：
+- OpenAI：LLM_BASE_URL=https://api.openai.com/v1，LLM_MODEL 填写可用模型名。
+- DeepSeek：LLM_BASE_URL=https://api.deepseek.com，LLM_MODEL=deepseek-v4-pro。
+- 其他兼容服务：填写服务商提供的 Base URL、API Key 和模型名。
+- 通常保持 LLM_API_PATH=/chat/completions、LLM_JSON_MODE=auto 即可。
+- Skill 默认跟随全局模型；也可以在 /skills 为单个 Skill 选择独立模型。
+- 真实 Provider 缺少 LLM_API_KEY 时会返回明确配置错误，不会静默降级。
+- 如需确定性演示模式，请在 /models 切换到 classroom-fixture。
+
+功能：
+- Agent 执行与完整日志
+- 多轮会话与上下文隔离
+- 会话中心：历史记录、继续追问、满意度评价、归档与转人工
+- RAG 知识库管理：上传 PDF/PPTX/DOCX/Markdown/TXT/JSON，自动解析、复核发布、版本和生效日期
+- 文档自动切片、关键词与向量混合检索、页码/幻灯片来源定位和检索测试
+- 默认使用无需密钥的本地字符向量；需要语义向量时可配置 EMBEDDING_PROVIDER=openai-compatible
+- 大模型候选 Plan + 程序白名单校验的自主编排
+- Plan 可视化编排、条件、依赖和重试
+- 独立 Skill 管理：/skills（Prompt、模型、依赖、版本、diff、恢复与测试）
+- 独立 Tool 管理：/tools（Schema、引用关系与真实服务端测试）
+- 独立 Planner 管理：/planner（Prompt、能力白名单、必需能力、预览与校验）
+- 独立模型管理：/models（Provider Profile、运行配置、切换与连接测试）
+- Tool 新增、编辑、删除、复制与 HTTP API 配置
+- Coze Workflow 中断续跑
+- Tool 请求、节点、耗时、输出和错误追踪
+- Agent/Plan/Skill/Tool 配置导入导出
+- OpenAI-Compatible 大模型统一接入、JSON 兼容降级、超时重试与连接诊断
+- 100 条核心评测集、Bad Case 新增、失败用例回流与质量门禁
+- 运营看板：趋势、满意度、路由、知识缺口、Tool 性能和风险分布
+- 高风险问题自动人工转接
+- 凭据、身份证、银行卡、第三方薪酬和劳动争议安全审计
+- 本人数据隔离和日志敏感字段自动脱敏
+
+安全说明：
+- Token 仅保存在本机 .env，不会写入网页或导出的配置 JSON。
+- 请勿把填写过 Token 的 .env 发给他人。

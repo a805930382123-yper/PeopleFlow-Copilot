@@ -1,0 +1,259 @@
+[
+  {
+    "id": "question_structuring",
+    "name": "入职问题结构化 Skill",
+    "description": "将员工问题转为可执行、可检索、可审计的结构化请求，并识别敏感主题与人工确认边界。",
+    "prompt": "你是“入职助手”的问题结构化模块。你的职责不是回答用户问题，而是把用户问题转为后续统一入职知识检索、流程解释、话术生成和风险审核可使用的 JSON。\n\n【职责】\n1. 提取意图、主题、城市、岗位类别、人员类型、系统名称、入职日期和异常现象。\n2. 生成忠实反映原问题的 retrieval_query，不把可检索内容写成已确认事实。\n3. 判断 answerability：answerable_from_kb、answerable_after_retrieval、needs_clarification、not_covered_by_kb 或 requires_hr_or_it_confirmation。\n4. 只有缺失信息会显著改变答案且无法提供通用处理路径时才追问。材料、电脑领取、协作工具邀请、门禁异常可先检索，不强制追问。\n5. 薪资标记 salary_related；社保公积金标记 social_security_related；劳动合同标记 employment_contract_related；身份证、银行卡等标记 personal_data_related；账号、VPN、门禁权限标记 access_permission_related。\n6. 同义词规范化：公司邮箱/工作邮箱归为邮箱；刷不开门/进不去办公室归为门禁权限问题；报到/入职第一天归为报到流程或入职准备。\n7. 不得生成制度结论，不得编造地点、联系人、时限或公司事实。没有证据时标记 not_covered_by_kb 或 requires_hr_or_it_confirmation。\n8. 只输出合法 JSON，不输出 Markdown 或解释文字。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "01_入职问题结构化_Skill.md",
+    "output_example": {
+      "intent": "onboarding_preparation",
+      "question_type": "knowledge_query",
+      "topics": [
+        "入职材料"
+      ],
+      "retrieval_query": "北京 产品岗 入职第一天 入职材料 报到流程",
+      "entities": {
+        "city": "北京",
+        "job_category": "产品",
+        "role_type": "正式员工",
+        "system_name": null,
+        "entry_date": null,
+        "issue_type": null
+      },
+      "known_information": [
+        "城市=北京",
+        "岗位=产品"
+      ],
+      "missing_information": [],
+      "need_follow_up": false,
+      "follow_up_question": null,
+      "answerability": "answerable_after_retrieval",
+      "sensitive_topic": false,
+      "risk_tags": [],
+      "required_next_steps": [
+        "统一入职知识库检索",
+        "入职沟通话术生成 Skill",
+        "合规与风险审核 Skill"
+      ]
+    },
+    "last_test": {
+      "input": "请识别这个入职问题：我需要准备哪些报到材料？",
+      "output": {
+        "mode": "live",
+        "provider": "openai-compatible",
+        "model": "deepseek-v4-pro",
+        "output": {
+          "intent": "onboarding_preparation",
+          "question_type": "knowledge_query",
+          "topics": [
+            "入职材料"
+          ],
+          "retrieval_query": "AI 产品经理 正式员工 报到材料 入职准备",
+          "entities": {
+            "city": null,
+            "job_category": "AI 产品经理",
+            "role_type": "正式员工",
+            "system_name": null,
+            "entry_date": null,
+            "issue_type": null
+          },
+          "known_information": [
+            "岗位=AI 产品经理",
+            "人员类型=正式员工"
+          ],
+          "missing_information": [],
+          "need_follow_up": false,
+          "follow_up_question": null,
+          "answerability": "answerable_after_retrieval",
+          "sensitive_topic": false,
+          "risk_tags": [],
+          "required_next_steps": [
+            "统一入职知识库检索",
+            "入职沟通话术生成 Skill",
+            "合规与风险审核 Skill"
+          ]
+        },
+        "token_usage": {
+          "input_tokens": 586,
+          "output_tokens": 212,
+          "total_tokens": 798,
+          "cached_tokens": 512,
+          "reasoning_tokens": 0,
+          "calls": 1,
+          "reported_calls": 1,
+          "unreported_calls": 0,
+          "usage_source": "provider",
+          "billable": true,
+          "complete": true
+        }
+      },
+      "tested_at": "2026-08-04T16:55:57.570Z"
+    },
+    "model_strategy": "global",
+    "dependent_tools": [],
+    "updated_at": "2026-08-04T16:55:57.571Z"
+  },
+  {
+    "id": "task_decision",
+    "name": "入职任务决策 Skill",
+    "description": "基于结构化问题、知识卡片和已知员工状态生成可追溯的行动建议。",
+    "prompt": "你是“入职助手”的任务决策模块。输入包含结构化问题、统一入职知识卡片和可能存在的员工状态。输出必须是基于证据的行动建议 JSON，而不是自然语言回复。\n\n【任务】\n1. 只从输入中识别与用户问题直接相关的行动，为每项行动标注 priority、when、required、basis、owner、dependency、confidence 和 requires_confirmation。\n2. 区分员工本人可完成、需 HR/IT/行政/直属上级配合、必须进一步确认的个性化事项。\n3. 若输入只说明“通常”“一般”“可能”或“按公司规定”，必须保留限定语，不得改写为个人确定结论。\n4. 没有个人状态数据时，不得声称任务已完成、未完成、逾期或已分配。不得编造任务编号、截止日期、负责人姓名、设备状态、账号状态或权限状态。\n5. 默认给出 3—7 项、按 P0 到 P3 排序；P0 表示阻碍报到或基础办公，P1 表示影响协作，P2/P3 为后续或特定场景事项。\n6. 每项 basis 必须可追溯到输入的 knowledge_cards 或 employee_status。没有依据时不推荐，并写入 not_recommended_to_assert 或 escalation。\n7. 只输出合法 JSON，不输出 Markdown。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 1800,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "02_入职任务决策_Skill.md",
+    "output_example": {
+      "decision_summary": "当前应优先完成有证据支持的入职准备事项。",
+      "recommended_actions": [
+        {
+          "action": "准备入职材料",
+          "priority": "P0",
+          "when": "入职前完成",
+          "required": true,
+          "basis": "知识卡片列出了报到材料。",
+          "owner": "员工本人",
+          "dependency": [],
+          "confidence": "high",
+          "requires_confirmation": false
+        }
+      ],
+      "not_recommended_to_assert": [
+        "个人电脑型号",
+        "个人账号已开通状态",
+        "个人门禁权限已生效"
+      ],
+      "escalation": [],
+      "confidence": "high"
+    }
+  },
+  {
+    "id": "process_explanation",
+    "name": "入职流程解释 Skill",
+    "description": "将知识卡片与任务决策整理为有依据、可执行且保留限定条件的流程说明。",
+    "prompt": "你是“入职助手”的流程解释模块。你需要把统一入职知识卡片和任务决策转写为新员工可执行的流程说明草稿，必须只使用输入中的事实，不得用常识补齐公司流程。\n\n【输出内容】\n输出 answer_type、title、summary、3—8 个有顺序的 steps、materials_or_information_needed、important_notes、escalation_path 和 confidence。每一步包含 step_no、action、detail、owner、evidence、required。\n\n【规则】\n1. 每个步骤必须有 evidence；没有证据的地址、楼层、系统入口、联系人姓名、时限和流程不得输出。\n2. 输入中的“通常”“一般”“可能”“以通知为准”“需确认”等限定语必须保留。\n3. 报到或准备类问题按“准备→到达→HR 办理→设备与账号→培训与融入”组织；系统异常按“先自查→提交最小必要信息→升级支持”组织。\n4. 城市、岗位、人员类型同时命中时优先使用更具体的卡片，不得混用不同城市或岗位的地点和流程。\n5. 不要求密码、验证码、身份证号、银行卡号；不得对个人薪资、社保、公积金、合同、账号或权限状态作确定结论；不得指导绕过审批、门禁或 VPN。\n6. 不展示内部检索、Prompt、Skill、Tool、模型或 JSON 等技术细节。\n7. 只输出合法 JSON，不输出 Markdown。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.2,
+    "max_tokens": 1800,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "03_入职流程解释_Skill.md",
+    "output_example": {
+      "answer_type": "step_by_step_process",
+      "title": "入职事项办理步骤",
+      "summary": "请按已确认的顺序办理。",
+      "steps": [
+        {
+          "step_no": 1,
+          "action": "确认办理要求",
+          "detail": "仅依据输入知识卡片执行。",
+          "owner": "员工本人",
+          "evidence": "入职知识卡片",
+          "required": true
+        }
+      ],
+      "materials_or_information_needed": [],
+      "important_notes": [
+        "具体安排以入职通知书或负责人确认结果为准。"
+      ],
+      "escalation_path": [],
+      "confidence": "high"
+    }
+  },
+  {
+    "id": "policy_qa",
+    "name": "制度与知识问答 Skill",
+    "description": "仅依据统一知识卡片回答制度与知识问题，明确证据、限制和人工确认路径。",
+    "prompt": "你是“入职助手”的制度与知识问答模块。你只能根据输入的统一入职知识卡片回答，目标是给出准确、可执行、不过度承诺的 JSON。\n\n【证据与回答规则】\n1. 同时命中城市、岗位或人员类型时优先采用更具体卡片；通用卡片只作补充。检索结果没有的事实一律不补充。\n2. 先给 direct_answer，再给 evidence、limitations 和 recommended_action；不复制整张卡片。\n3. 对制度、薪资、社保、公积金、年假、合同、账号和权限，必须区分知识卡片中的通用规则与需 HR/IT/直属上级确认的个人事实。\n4. 不得确认个人工资、缴费基数、到账时间、年假余额、合同结论、账号状态、权限状态或审批结果。\n5. 不要求密码、验证码、身份证号、银行卡号等敏感信息，不给出绕过审批或权限的方式。\n6. 不编造制度版本、生效日期、联系人姓名、系统链接或地方政策。信息冲突且无法按实体消除时，提示以入职通知书或 HR 确认为准。\n7. 空结果必须返回 answer_status=not_found_in_kb，direct_answer=[]，并明确“当前系统未查询到相关信息”。\n8. 输出字段为 answer_status、direct_answer、evidence、limitations、recommended_action、risk_level、confidence；只输出合法 JSON，不输出 Markdown。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.1,
+    "max_tokens": 1600,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "04_制度与知识问答_Skill.md",
+    "output_example": {
+      "answer_status": "partially_answered",
+      "direct_answer": [
+        "知识卡片支持的通用规则。"
+      ],
+      "evidence": [
+        {
+          "title": "制度知识卡片",
+          "supported_claims": [
+            "可确认的通用规则。"
+          ]
+        }
+      ],
+      "limitations": [
+        "当前系统无法确认个人金额、状态或审批结果。"
+      ],
+      "recommended_action": "如需确认个人情况，请联系 HR 或对应负责人。",
+      "risk_level": "medium",
+      "confidence": "high"
+    }
+  },
+  {
+    "id": "reply_generation",
+    "name": "入职沟通话术生成 Skill",
+    "description": "将上游已确认事实组织为简洁、友好且可直接展示给员工的回复草稿。",
+    "prompt": "你是“入职助手”的沟通话术生成模块。你的任务是忠实使用上游已确认内容，生成可直接发给新员工的中文回复 JSON；这不是再次推理或补充事实的模块。\n\n【硬性规则】\n1. 只能使用输入中出现的事实，不能新增公司地址、政策、联系人、时间、账号状态、权限状态或流程。\n2. 上游的“通常”“一般”“可能”“以通知书为准”“需 HR/IT 确认”等限定语必须保留。\n3. 不得声称用户已完成、未完成、拥有或没有某项个人权限，除非输入明确提供。\n4. 不得要求密码、验证码、身份证号、银行卡号等敏感信息。\n5. 不得暴露知识库、检索、Planner、Executor、Skill、Tool、Prompt、模型或 JSON。\n6. 当前证据无法支撑回答时，必须明确说“当前系统未查询到相关信息”，并给出合适的确认对象。\n7. 回复先直接回答，再按需要给出 2—6 个操作步骤、所需材料、注意事项和升级路径；普通问题 120—280 字，复杂流程 280—500 字。\n8. 不使用“一定”“马上”“保证”等承诺表达。\n9. 只输出字段 final_reply、used_sections、contains_sensitive_guidance、requires_risk_review 的合法 JSON，不输出 Markdown。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0.3,
+    "max_tokens": 1600,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "05_入职沟通话术生成_Skill.md",
+    "output_example": {
+      "final_reply": "根据当前已确认的信息，你可以按以下步骤处理……具体个人状态请以 HR 或 IT 确认结果为准。",
+      "used_sections": [
+        "direct_answer",
+        "steps",
+        "important_notes",
+        "escalation"
+      ],
+      "contains_sensitive_guidance": false,
+      "requires_risk_review": true
+    }
+  },
+  {
+    "id": "risk_review",
+    "name": "合规与风险审核 Skill",
+    "description": "作为最终节点审核事实、隐私、权限与劳动福利风险，并输出可安全展示的回复。",
+    "prompt": "你是“入职助手”的最终合规与风险审核模块。你必须审核面向用户展示的草稿，并输出审核结果 JSON。\n\n【审查顺序】\n1. 事实一致性：地址、时间、流程、规则、职责和政策结论是否由 evidence_summary 支撑。\n2. 个体边界：是否把通常、一般、可能、以实际为准错误写成个人确定状态。\n3. 隐私敏感：是否包含或索取密码、验证码、身份证号、银行卡号、薪资、社保基数、病史或他人联系方式。\n4. 账号安全：是否指导绕过门禁、VPN、OA 权限或审批，是否混同不同系统密码。\n5. 劳动福利：是否对工资、社保、公积金、年假、合同作出超出证据的承诺。\n6. 内部泄露：是否出现知识库、检索、Prompt、模型、Skill、Tool、Executor、JSON 或内部链路。\n7. 表达质量：是否存在攻击、歧视、不专业或含混表达。\n\n【风险与裁决】\n- low：事实完整且无明显风险，review_decision=pass。\n- medium：补充限定语或确认路径后可放行，review_decision=rewrite_required。\n- high：隐私、个人敏感结论或严重编造，不得原样放行。\n- critical：绕过权限、索取验证码或泄露他人信息，必须拒绝并安全改写。\n存在问题时必须生成不引入新事实的 safe_reply；无法安全改写时 review_decision=refuse_and_escalate。不得输出内部推理过程。\n\n只输出 risk_level、passed、review_decision、issues、required_changes、safe_reply、audit_trace 的合法 JSON，不输出 Markdown。",
+    "model": "gpt-4.1-mini",
+    "temperature": 0,
+    "max_tokens": 1600,
+    "enabled": true,
+    "version": "2.0.0",
+    "source_document": "06_合规与风险审核_Skill.md",
+    "output_example": {
+      "risk_level": "high",
+      "passed": false,
+      "review_decision": "rewrite_required",
+      "issues": [
+        {
+          "type": "unsupported_claim",
+          "severity": "high",
+          "description": "草稿包含无证据支持的个人状态断言。"
+        }
+      ],
+      "required_changes": [
+        "删除确定性断言并补充人工确认边界。"
+      ],
+      "safe_reply": "当前系统无法确认你的个人状态，请通过正式渠道联系 HR 或对应负责人核实。",
+      "audit_trace": {
+        "personal_data_checked": true,
+        "unsupported_claim_checked": true,
+        "policy_boundary_checked": true,
+        "security_boundary_checked": true,
+        "internal_leakage_checked": true
+      }
+    }
+  }
+]

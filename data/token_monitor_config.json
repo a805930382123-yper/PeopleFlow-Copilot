@@ -1,0 +1,8 @@
+{
+  "daily_budget_tokens": 0,
+  "monthly_budget_tokens": 0,
+  "warning_threshold_percent": 70,
+  "critical_threshold_percent": 90,
+  "currency": "CNY",
+  "model_pricing": []
+}

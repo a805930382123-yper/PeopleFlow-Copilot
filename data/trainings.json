@@ -1,0 +1,10 @@
+[
+  {"id":"TR001","name":"新员工启航营","type":"通用培训","departments":["all"],"positions":["all"],"stage":"week_1","time":"每周三 10:00-12:00","owner":"许曼","format":"线上直播","required":true,"status":"待完成"},
+  {"id":"TR002","name":"信息安全基础","type":"信息安全培训","departments":["all"],"positions":["all"],"stage":"week_1","time":"入职后 5 个工作日内","owner":"罗凯","format":"在线课程与测验","required":true,"status":"待完成"},
+  {"id":"TR003","name":"企业文化与价值观","type":"企业文化培训","departments":["all"],"positions":["all"],"stage":"week_1","time":"每周四 14:00-15:30","owner":"许曼","format":"线下工作坊","required":true,"status":"待完成"},
+  {"id":"TR004","name":"产品工作方法","type":"岗位培训","departments":["产品部"],"positions":["AI 产品经理"],"stage":"day_30","time":"入职后第 2 周","owner":"周明远","format":"导师带教","required":true,"status":"待完成"},
+  {"id":"TR005","name":"研发环境与发布流程","type":"岗位培训","departments":["研发部"],"positions":["前端工程师"],"stage":"week_1","time":"入职后 3 个工作日内","owner":"徐嘉诚","format":"实操培训","required":true,"status":"待完成"},
+  {"id":"TR006","name":"客户沟通基础","type":"部门业务培训","departments":["销售部","客户成功部"],"positions":["all"],"stage":"day_30","time":"每月第二周周二","owner":"方怡然","format":"案例工作坊","required":true,"status":"待完成"},
+  {"id":"TR007","name":"财务合规基础","type":"部门业务培训","departments":["财务部"],"positions":["all"],"stage":"week_2","time":"入职后第 2 周","owner":"郭敏","format":"线下课程","required":true,"status":"待完成"},
+  {"id":"TR008","name":"数据隐私与合规","type":"信息安全培训","departments":["法务部","数据部"],"positions":["all"],"stage":"day_30","time":"入职后 20 个工作日内","owner":"罗凯","format":"在线课程","required":true,"status":"待完成"}
+]

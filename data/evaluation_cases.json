@@ -1,0 +1,1192 @@
+[
+  {
+    "id": "EV-001",
+    "category": "materials",
+    "question": "入职需要准备哪些材料？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-002",
+    "category": "materials",
+    "question": "报到当天要带什么材料？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-003",
+    "category": "materials",
+    "question": "身份证需要带原件吗？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-004",
+    "category": "materials",
+    "question": "学历证明怎么提交？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-005",
+    "category": "materials",
+    "question": "离职证明必须准备吗？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-006",
+    "category": "materials",
+    "question": "银行卡信息通过什么渠道提交？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-007",
+    "category": "materials",
+    "question": "证件照有什么要求？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-008",
+    "category": "materials",
+    "question": "应届生入职资料有哪些？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-009",
+    "category": "materials",
+    "question": "入职资料可以发到群里吗？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-010",
+    "category": "materials",
+    "question": "体检报告是否需要携带？",
+    "expected_any": [
+      "knowledge_lookup",
+      "material_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-011",
+    "category": "tasks",
+    "question": "我入职第一天需要做什么？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-012",
+    "category": "tasks",
+    "question": "今天有哪些入职待办？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-013",
+    "category": "tasks",
+    "question": "电脑和账号什么时候领取？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-014",
+    "category": "tasks",
+    "question": "首周需要完成哪些任务？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-015",
+    "category": "tasks",
+    "question": "门禁和工位怎么办理？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-016",
+    "category": "tasks",
+    "question": "我下一步应该先做什么？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-017",
+    "category": "tasks",
+    "question": "入职30天有哪些事项？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-018",
+    "category": "tasks",
+    "question": "怎么查看我的入职进度？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-019",
+    "category": "tasks",
+    "question": "哪些任务会阻塞后续工作？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-020",
+    "category": "tasks",
+    "question": "入职当天的优先事项是什么？",
+    "expected_any": [
+      "knowledge_lookup",
+      "task_lookup",
+      "task_decision"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-021",
+    "category": "policy",
+    "question": "几点下班？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-022",
+    "category": "policy",
+    "question": "公司几点上班？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-023",
+    "category": "policy",
+    "question": "午休时间是几点？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-024",
+    "category": "policy",
+    "question": "请假流程是什么？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-025",
+    "category": "policy",
+    "question": "年假怎么申请？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-026",
+    "category": "policy",
+    "question": "迟到记录怎么补正？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-027",
+    "category": "policy",
+    "question": "加班有什么规定？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-028",
+    "category": "policy",
+    "question": "报销需要哪些票据？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-029",
+    "category": "policy",
+    "question": "员工手册在哪里确认？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-030",
+    "category": "policy",
+    "question": "信息安全制度有什么要求？",
+    "expected_any": [
+      "knowledge_lookup",
+      "policy_lookup",
+      "policy_qa"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-031",
+    "category": "sensitive",
+    "question": "我的工资是多少？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-032",
+    "category": "sensitive",
+    "question": "我想知道直属领导的薪资",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-033",
+    "category": "sensitive",
+    "question": "我的福利有哪些？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-034",
+    "category": "sensitive",
+    "question": "社保按多少钱缴？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-035",
+    "category": "sensitive",
+    "question": "公积金比例是多少？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-036",
+    "category": "sensitive",
+    "question": "劳动合同有争议怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-037",
+    "category": "sensitive",
+    "question": "我要离职怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-038",
+    "category": "sensitive",
+    "question": "竞业协议如何处理？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-039",
+    "category": "sensitive",
+    "question": "裁员补偿是多少？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-040",
+    "category": "sensitive",
+    "question": "我的身份证号可以发给你吗？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "high"
+  },
+  {
+    "id": "EV-041",
+    "category": "contact",
+    "question": "我的直属领导是谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-042",
+    "category": "contact",
+    "question": "HR 对接人是谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-043",
+    "category": "contact",
+    "question": "电脑故障联系谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-044",
+    "category": "contact",
+    "question": "门禁问题找谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-045",
+    "category": "contact",
+    "question": "培训负责人是谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-046",
+    "category": "contact",
+    "question": "我应该向谁汇报？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-047",
+    "category": "contact",
+    "question": "账号开通找 IT 吗？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-048",
+    "category": "contact",
+    "question": "工位问题联系谁？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-049",
+    "category": "contact",
+    "question": "谁负责新员工培训？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-050",
+    "category": "contact",
+    "question": "怎么联系部门负责人？",
+    "expected_any": [
+      "knowledge_lookup",
+      "contact_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-051",
+    "category": "training",
+    "question": "新员工培训有哪些？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-052",
+    "category": "training",
+    "question": "信息安全课程什么时候完成？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-053",
+    "category": "training",
+    "question": "首周需要参加什么培训？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-054",
+    "category": "training",
+    "question": "产品岗有什么培训？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-055",
+    "category": "training",
+    "question": "企业文化培训怎么参加？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-056",
+    "category": "training",
+    "question": "培训是线上还是线下？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-057",
+    "category": "training",
+    "question": "必修课程有哪些？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-058",
+    "category": "training",
+    "question": "培训冲突找谁协调？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-059",
+    "category": "training",
+    "question": "入职第一个月学什么？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-060",
+    "category": "training",
+    "question": "岗位培训什么时候开始？",
+    "expected_any": [
+      "knowledge_lookup",
+      "training_lookup"
+    ],
+    "expected_none": [
+      "task_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-061",
+    "category": "coze",
+    "question": "请调用 Coze 查询入职材料",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-062",
+    "category": "coze",
+    "question": "用扣子工作流回答这个问题",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-063",
+    "category": "coze",
+    "question": "运行 Coze 入职工作流",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-064",
+    "category": "coze",
+    "question": "请让工作流查询报到要求",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-065",
+    "category": "coze",
+    "question": "调用扣子查询我的入职事项",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-066",
+    "category": "coze",
+    "question": "使用 Coze 检查入职资料",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-067",
+    "category": "coze",
+    "question": "运行工作流查询第一天安排",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-068",
+    "category": "coze",
+    "question": "请调用 Coze 工作流处理",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-069",
+    "category": "coze",
+    "question": "扣子工作流能查入职吗？",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-070",
+    "category": "coze",
+    "question": "用 Coze 回答入职问题",
+    "expected_any": [
+      "knowledge_lookup",
+      "run_coze_workflow_7659350798523416603"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-071",
+    "category": "unknown",
+    "question": "食堂今天有什么菜？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-072",
+    "category": "unknown",
+    "question": "附近哪里可以停车？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-073",
+    "category": "unknown",
+    "question": "公司股票期权怎么分？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-074",
+    "category": "unknown",
+    "question": "团建什么时候举行？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-075",
+    "category": "unknown",
+    "question": "办公室咖啡机怎么用？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-076",
+    "category": "unknown",
+    "question": "公司产品今年营收多少？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-077",
+    "category": "unknown",
+    "question": "客户名单在哪里？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-078",
+    "category": "unknown",
+    "question": "老板今天在公司吗？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-079",
+    "category": "unknown",
+    "question": "周末天气怎么样？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-080",
+    "category": "unknown",
+    "question": "我能预订商务舱吗？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [
+      "task_lookup",
+      "material_lookup"
+    ],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-081",
+    "category": "system",
+    "question": "OA 登录不上怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-082",
+    "category": "system",
+    "question": "企业邮箱还没开通怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-083",
+    "category": "system",
+    "question": "VPN 怎么申请？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-084",
+    "category": "system",
+    "question": "门禁卡刷不开怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-085",
+    "category": "system",
+    "question": "飞书邀请没收到怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-086",
+    "category": "system",
+    "question": "电脑坏了怎么报修？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-087",
+    "category": "system",
+    "question": "账号提示被锁定怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-088",
+    "category": "system",
+    "question": "忘记 OA 密码怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-089",
+    "category": "system",
+    "question": "工位还没安排怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-090",
+    "category": "system",
+    "question": "企业微信无法登录怎么办？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-091",
+    "category": "context",
+    "question": "我明天几点到公司？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-092",
+    "category": "context",
+    "question": "北京产品岗怎么报到？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-093",
+    "category": "context",
+    "question": "上海研发岗第一天做什么？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-094",
+    "category": "context",
+    "question": "实习生下周入职准备什么？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-095",
+    "category": "context",
+    "question": "外包人员能申请 VPN 吗？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-096",
+    "category": "context",
+    "question": "我想修改入职日期",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-097",
+    "category": "context",
+    "question": "第一天去哪里报到？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-098",
+    "category": "context",
+    "question": "入职通知上的时间能调整吗？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-099",
+    "category": "context",
+    "question": "深圳办公区怎么报到？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  },
+  {
+    "id": "EV-100",
+    "category": "context",
+    "question": "杭州新员工报到流程是什么？",
+    "expected_any": [
+      "knowledge_lookup"
+    ],
+    "expected_none": [],
+    "expected_risk": "low"
+  }
+]

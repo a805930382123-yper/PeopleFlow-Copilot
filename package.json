@@ -1,0 +1,53 @@
+{
+  "name": "peopleflow-onboarding-agent",
+  "version": "1.6.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vinext dev",
+    "dev:api": "node server/index.mjs",
+    "build": "vinext build",
+    "package:windows": "npm run build && node scripts/package-windows.mjs",
+    "start": "node scripts/start.mjs",
+    "test": "npm run build && node --test tests/rendered-html.test.mjs",
+    "test:unit": "node --import=./tests/setup-env.mjs --test tests/coze-workflow.test.mjs tests/agent-routing.test.mjs tests/llm.test.mjs tests/skill-config.test.mjs tests/platform-v1.test.mjs tests/productization.test.mjs tests/knowledge-import.test.mjs tests/knowledge-rag.test.mjs tests/plan-validator.test.mjs tests/evaluation-v2.test.mjs tests/token-usage.test.mjs",
+    "test:api": "node --import=./tests/setup-env.mjs tests/api-smoke.mjs",
+    "test:portable": "node tests/portable-smoke.mjs",
+    "test:release": "node tests/release-smoke.mjs",
+    "test:launcher": "node tests/launcher-smoke.mjs",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "typecheck": "tsc --noEmit --incremental false",
+    "db:generate": "drizzle-kit generate"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.45.2",
+    "jszip": "3.10.1",
+    "mammoth": "1.10.0",
+    "next": "16.2.6",
+    "pdfjs-dist": "5.4.624",
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.37.1",
+    "@tailwindcss/postcss": "4.2.1",
+    "@types/node": "22.19.19",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.2",
+    "@vitejs/plugin-rsc": "0.5.26",
+    "drizzle-kit": "0.31.10",
+    "eslint": "9.39.4",
+    "eslint-config-next": "16.2.6",
+    "react-server-dom-webpack": "19.2.6",
+    "tailwindcss": "4.2.1",
+    "typescript": "5.9.3",
+    "vinext": "0.0.50",
+    "vite": "8.0.13",
+    "wrangler": "4.92.0"
+  },
+  "type": "module"
+}

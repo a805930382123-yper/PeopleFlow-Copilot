@@ -1,0 +1,14 @@
+[
+  {"id":"C001","name":"陈思琪","role":"HR 对接人","department":"人力资源部","email":"siqi.chen@example.local","channel":"企业通讯录","scope":["产品部","研发部","销售部","客户成功部","数据部"]},
+  {"id":"C002","name":"李文静","role":"HR 对接人","department":"人力资源部","email":"wenjing.li@example.local","channel":"企业通讯录","scope":["设计部","市场部","财务部","法务部"]},
+  {"id":"C003","name":"IT 服务台","role":"IT 服务台","department":"信息技术部","email":"it-help@example.local","channel":"服务台工单","scope":["all"]},
+  {"id":"C004","name":"唐婧","role":"行政人员","department":"行政部","email":"jing.tang@example.local","channel":"企业通讯录","scope":["all"]},
+  {"id":"C005","name":"许曼","role":"培训负责人","department":"人力资源部","email":"man.xu@example.local","channel":"企业通讯录","scope":["all"]},
+  {"id":"C006","name":"蒋蕾","role":"财务报销负责人","department":"财务部","email":"lei.jiang@example.local","channel":"企业通讯录","scope":["all"]},
+  {"id":"C007","name":"罗凯","role":"信息安全负责人","department":"信息技术部","email":"kai.luo@example.local","channel":"企业通讯录","scope":["all"]},
+  {"id":"C008","name":"周明远","role":"部门负责人","department":"产品部","email":"mingyuan.zhou@example.local","channel":"企业通讯录","scope":["产品部"]},
+  {"id":"C009","name":"徐嘉诚","role":"部门负责人","department":"研发部","email":"jiacheng.xu@example.local","channel":"企业通讯录","scope":["研发部"]},
+  {"id":"C010","name":"沈安然","role":"部门负责人","department":"设计部","email":"anran.shen@example.local","channel":"企业通讯录","scope":["设计部"]},
+  {"id":"C011","name":"黄子轩","role":"部门负责人","department":"市场部","email":"zixuan.huang@example.local","channel":"企业通讯录","scope":["市场部"]},
+  {"id":"C012","name":"方怡然","role":"部门负责人","department":"销售部","email":"yiran.fang@example.local","channel":"企业通讯录","scope":["销售部"]}
+]
