@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import "./run-detail.css";
+import { apiRequest } from "../../admin/api";
 
 type ValidationIssue = { code: string; capability_id?: string | null; message: string; severity: string };
 type Step = { step_id?: string; id?: string; name?: string; capability_id: string; kind: string; goal?: string; status: string; duration_ms?: number; attempts?: number; input?: unknown; output?: unknown; error?: unknown; provider?: string | null; model?: string | null };
@@ -18,7 +19,6 @@ type Run = {
   skill_versions?: Record<string, string>; tool_versions?: Record<string, string>;
 };
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8787/api";
 const Json = ({ value }: { value: unknown }) => <pre>{JSON.stringify(value, null, 2)}</pre>;
 
 export default function RunDetailPage() {
@@ -31,29 +31,14 @@ export default function RunDetailPage() {
   const [expectedAnswer, setExpectedAnswer] = useState("");
   const runId = typeof params?.runId === "string" ? decodeURIComponent(params.runId) : "";
 
-  const request = useCallback(async (path: string, options?: RequestInit) => {
-    const controller = new AbortController();
-    const timeout = window.setTimeout(() => controller.abort(), 15000);
-    try {
-      const response = await fetch(`${API}${path}`, { ...options, signal: options?.signal || controller.signal });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const serverError = result?.error;
-        throw new Error(typeof serverError === "string" ? serverError : serverError?.message || "请求失败");
-      }
-      return result;
-    } catch (caught) {
-      if (caught instanceof DOMException && caught.name === "AbortError") throw new Error("读取运行记录超时，请检查本地服务是否正常运行。");
-      throw caught;
-    } finally {
-      window.clearTimeout(timeout);
-    }
+  const request = useCallback(async <T = unknown>(path: string, options?: RequestInit) => {
+    return apiRequest<T>(path, { ...options, timeoutMs: 15000, timeoutMessage: "读取运行记录超时，请检查本地服务是否正常运行。" });
   }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
     if (!runId) { setError("运行记录地址缺少 Run ID。"); setLoading(false); return; }
-    try { setRun(await request(`/runs/${runId}`)); setError(""); }
+    try { setRun(await request<Run>(`/runs/${runId}`)); setError(""); }
     catch (caught) { setError(caught instanceof Error ? caught.message : "加载失败"); }
     finally { setLoading(false); }
   }, [request, runId]);
@@ -65,7 +50,7 @@ export default function RunDetailPage() {
   const action = async (name: string, path: string, body: unknown) => {
     setBusy(name);
     try {
-      const result = await request(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const result = await request<Run>(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       if (name === "retry") window.location.href = `/runs/${result.id}`;
       else await load();
     } catch (caught) { setError(caught instanceof Error ? caught.message : "操作失败"); }

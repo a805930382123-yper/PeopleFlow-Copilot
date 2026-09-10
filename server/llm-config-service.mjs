@@ -1,5 +1,6 @@
-import { readJsonOr, writeJson } from "./json-store.mjs";
+import { readJsonOr, updateJson, writeJson } from "./json-store.mjs";
 import { getLlmRuntimeConfig, testLlmConnection } from "./llm.mjs";
+import { getRuntimeEnv, hasExternalRuntimeEnv, setRuntimeConfig } from "./runtime-env.mjs";
 
 const FILE = "llm_config.json";
 export const PROVIDER_PROFILES = [
@@ -36,18 +37,20 @@ function validateConfig(input) {
 
 function applyConfig(config) {
   if (!config?.active) return;
-  process.env.LLM_PROVIDER = config.provider;
-  process.env.LLM_MODEL = config.model;
-  process.env.LLM_BASE_URL = config.base_url;
-  process.env.LLM_API_PATH = config.api_path;
-  process.env.LLM_JSON_MODE = config.json_mode;
-  process.env.LLM_TIMEOUT_MS = String(config.timeout_ms);
-  process.env.LLM_MAX_RETRIES = String(config.max_retries);
+  setRuntimeConfig({
+    LLM_PROVIDER: config.provider,
+    LLM_MODEL: config.model,
+    LLM_BASE_URL: config.base_url,
+    LLM_API_PATH: config.api_path,
+    LLM_JSON_MODE: config.json_mode,
+    LLM_TIMEOUT_MS: config.timeout_ms,
+    LLM_MAX_RETRIES: config.max_retries,
+  });
 }
 
 export async function initializeLlmConfig() {
   const saved = await readJsonOr(FILE, { active: false });
-  applyConfig(saved);
+  if (!hasExternalRuntimeEnv("LLM_PROVIDER")) applyConfig(saved);
   return saved;
 }
 
@@ -59,9 +62,9 @@ export async function getLlmConfig() {
     ...runtime,
     profile_id: profileId,
     provider_description: PROVIDER_PROFILES.find((item) => item.id === profileId)?.description || "OpenAI-Compatible 模型服务。",
-    base_url: saved.active ? saved.base_url : process.env.LLM_BASE_URL || "",
-    api_path: saved.active ? saved.api_path : process.env.LLM_API_PATH || "/chat/completions",
-    api_key: { configured: Boolean(process.env.LLM_API_KEY?.trim()), env_var: "LLM_API_KEY" },
+    base_url: saved.active ? saved.base_url : getRuntimeEnv("LLM_BASE_URL") || "",
+    api_path: saved.active ? saved.api_path : getRuntimeEnv("LLM_API_PATH") || "/chat/completions",
+    api_key: { configured: Boolean(getRuntimeEnv("LLM_API_KEY")?.trim()), env_var: "LLM_API_KEY" },
     profiles: PROVIDER_PROFILES,
     saved: Boolean(saved.active),
     last_test: saved.last_test || null,
@@ -94,7 +97,6 @@ export async function switchLlmProvider(input) {
 export async function testManagedLlmConnection() {
   const result = await testLlmConnection();
   const tested = { ...result, tested_at: new Date().toISOString() };
-  const saved = await readJsonOr(FILE, { active: false });
-  await writeJson(FILE, { ...saved, last_test: { ok: tested.ok, provider: tested.provider, model: tested.model, duration_ms: tested.duration_ms || 0, tested_at: tested.tested_at, error: tested.error || null } });
+  await updateJson(FILE, (saved) => ({ ...saved, last_test: { ok: tested.ok, provider: tested.provider, model: tested.model, duration_ms: tested.duration_ms || 0, tested_at: tested.tested_at, error: tested.error || null } }), { active: false });
   return tested;
 }

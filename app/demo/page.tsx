@@ -3,22 +3,33 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { apiRequest, jsonRequest } from "../admin/api";
 
 type Employee = { id: string; name: string; department: string; position: string; manager: string };
 type Message = { id: string; role: "user" | "assistant"; content: string; feedbackable?: boolean };
 type DemoSeed = { employee: Employee; quick_questions: string[]; sample_messages: Message[] };
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8787/api";
 const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 const showcaseEmployees: Employee[] = [
-  { id: "E001", name: "林晓雨", department: "产品部", position: "AI 产品经理", manager: "周明远" },
-  { id: "E002", name: "赵一鸣", department: "研发部", position: "前端工程师", manager: "徐嘉诚" },
-  { id: "E003", name: "王若琳", department: "设计部", position: "体验设计师", manager: "沈安然" },
+  { id: "DEMO-001", name: "示例员工A", department: "产品部", position: "AI 产品经理", manager: "示例主管A" },
+  { id: "DEMO-002", name: "示例员工B", department: "研发部", position: "前端工程师", manager: "示例主管B" },
+  { id: "DEMO-003", name: "示例员工C", department: "设计部", position: "体验设计师", manager: "示例主管C" },
 ];
 const showcaseQuestions = ["需要准备什么入职材料？", "我的直属领导是谁？", "公司几点下班？"];
 
+function MessageContent({ content }: { content: string }) {
+  const lines = content.split("\n").filter((line, index, list) => line.trim() || (index > 0 && index < list.length - 1));
+  const firstListIndex = lines.findIndex((line) => /^\d+[.、]\s*/.test(line));
+  const lastListIndex = lines.reduce((last, line, index) => /^\d+[.、]\s*/.test(line) ? index : last, -1);
+  const listItems = lines.slice(firstListIndex, lastListIndex + 1).filter((line) => /^\d+[.、]\s*/.test(line));
+  if (!listItems.length) return <div className="demo-bubble-text">{content}</div>;
+  const intro = lines.slice(0, firstListIndex);
+  const outro = lines.slice(lastListIndex + 1);
+  return <div className="demo-bubble-text structured">{intro.map((line, index) => <p key={`intro-${line}-${index}`}>{line}</p>)}<ol>{listItems.map((line) => <li key={line}>{line.replace(/^\d+[.、]\s*/, "")}</li>)}</ol>{outro.map((line, index) => <p className="demo-answer-note" key={`outro-${line}-${index}`}>{line}</p>)}</div>;
+}
+
 function isPublicShowcase() {
-  return !["localhost", "127.0.0.1"].includes(window.location.hostname);
+  return window.location.hostname.startsWith("peopleflow-onboarding-ai.");
 }
 
 function showcaseSeed(employeeId: string): DemoSeed {
@@ -52,16 +63,16 @@ export default function OnboardingAssistantDemo() {
   const [online, setOnline] = useState(false);
   const [feedback, setFeedback] = useState<Record<string, "up" | "down">>({});
   const [showcaseMode, setShowcaseMode] = useState(false);
+  const [started, setStarted] = useState(false);
   const messageEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const loadSeed = async (nextEmployeeId: string) => {
-    const response = await fetch(`${API}/demo/bootstrap?employee_id=${encodeURIComponent(nextEmployeeId)}`);
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || "示例数据加载失败");
+    const result = await apiRequest<DemoSeed>(`/demo/bootstrap?employee_id=${encodeURIComponent(nextEmployeeId)}`);
     setSeed(result);
     setMessages(result.sample_messages || []);
     setConversationId("");
+    setStarted(false);
   };
 
   useEffect(() => {
@@ -69,17 +80,20 @@ export default function OnboardingAssistantDemo() {
       const publicMode = isPublicShowcase();
       setShowcaseMode(publicMode);
       if (publicMode) {
-        const publicSeed = showcaseSeed("E001");
+        const publicSeed = showcaseSeed("DEMO-001");
         setOnline(true);
         setEmployees(showcaseEmployees);
+        setEmployeeId("DEMO-001");
         setSeed(publicSeed);
         setMessages(publicSeed.sample_messages);
+        setStarted(false);
         return;
       }
       try {
-        const [healthResponse, bootstrapResponse] = await Promise.all([fetch(`${API}/health`), fetch(`${API}/bootstrap`)]);
-        const health = await healthResponse.json();
-        const bootstrap = await bootstrapResponse.json();
+        const [health, bootstrap] = await Promise.all([
+          apiRequest<{ ok?: boolean }>("/health"),
+          apiRequest<{ employees?: Employee[] }>("/bootstrap"),
+        ]);
         setOnline(Boolean(health.ok));
         setEmployees(bootstrap.employees || []);
         await loadSeed("E001");
@@ -102,6 +116,7 @@ export default function OnboardingAssistantDemo() {
       setSeed(publicSeed);
       setMessages(publicSeed.sample_messages);
       setConversationId("");
+      setStarted(false);
       return;
     }
     try { await loadSeed(nextEmployeeId); }
@@ -112,6 +127,7 @@ export default function OnboardingAssistantDemo() {
     const question = (preset ?? input).trim();
     if (!question || typing) return;
     const userMessage: Message = { id: `user-${Date.now()}`, role: "user", content: question };
+    setStarted(true);
     setMessages((current) => [...current, userMessage]);
     setInput("");
     setTyping(true);
@@ -128,9 +144,7 @@ export default function OnboardingAssistantDemo() {
       const payload = conversationId
         ? { actor_employee_id: employeeId, question }
         : { employee_id: employeeId, actor_employee_id: employeeId, question };
-      const response = await fetch(`${API}${endpoint}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "回复生成失败");
+      const result = await apiRequest<{ conversation_id?: string; response_message_id?: string; final_reply?: string }>(endpoint, jsonRequest("POST", payload));
       await wait(Math.max(0, 1000 - (Date.now() - startedAt)));
       setConversationId(result.conversation_id || conversationId);
       setMessages((current) => [...current, { id: result.response_message_id || `assistant-${Date.now()}`, role: "assistant", content: result.final_reply || "当前没有查询到可展示的回答。", feedbackable: true }]);
@@ -148,8 +162,16 @@ export default function OnboardingAssistantDemo() {
       return;
     }
     if (!conversationId) return;
-    const response = await fetch(`${API}/conversations/${conversationId}/feedback`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message_id: message.id, rating, tags: rating === "up" ? ["回答有帮助"] : ["需要优化", "Bad Case 候选"] }) });
-    if (response.ok) setFeedback((current) => ({ ...current, [message.id]: rating }));
+    try {
+      await apiRequest(`/conversations/${conversationId}/feedback`, jsonRequest("POST", { message_id: message.id, rating, tags: rating === "up" ? ["回答有帮助"] : ["需要优化", "Bad Case 候选"] }));
+      setFeedback((current) => ({ ...current, [message.id]: rating }));
+    } catch {
+      // Feedback is non-blocking in the demo surface.
+    }
+  };
+  const copyMessage = async (message: Message) => {
+    try { await navigator.clipboard.writeText(message.content); }
+    catch { /* Clipboard may be unavailable in a restricted preview. */ }
   };
 
   return <main className="demo-shell">
@@ -162,6 +184,12 @@ export default function OnboardingAssistantDemo() {
         </div>
       </header>
 
+      {seed && <section className="onboarding-pass" aria-label="员工入职通行证">
+        <div className="pass-identity"><span>{seed.employee.name.slice(0, 1)}</span><div><small>EMPLOYEE PASS</small><strong>{seed.employee.name}</strong><p>{seed.employee.department} · {seed.employee.position}</p></div></div>
+        <div className="pass-stage"><small>当前阶段</small><strong>Day 1</strong><span>入职准备中</span></div>
+        <div className="pass-meta"><div><small>直属领导</small><b>{seed.employee.manager || "待 HR 确认"}</b></div><div><small>材料进度</small><b>待确认</b></div><div><small>下一步</small><b>核对报到材料</b></div></div>
+      </section>}
+
       <div className="demo-quick-area">
         <span>常见问题</span>
         <div>{(seed?.quick_questions || ["需要准备什么入职材料？", "我的直属领导是谁？", "公司的福利制度有哪些？"]).map((question) => <button key={question} disabled={typing || !online} onClick={() => send(question)}>{question}</button>)}</div>
@@ -171,10 +199,10 @@ export default function OnboardingAssistantDemo() {
         {!messages.length && <div className="demo-loading">正在加载员工入职信息…</div>}
         {messages.map((message) => <article className={`demo-message ${message.role}`} key={message.id}>
           {message.role === "assistant" && <span className="demo-avatar">AI</span>}
-          <div><small>{message.role === "assistant" ? "入职小助手" : seed?.employee.name || "我"}</small><p>{message.content}</p>{message.role === "assistant" && message.feedbackable && <div className="demo-feedback"><span>这条回答有帮助吗？</span><button className={feedback[message.id] === "up" ? "selected" : ""} aria-label="回答有帮助" onClick={() => rateMessage(message, "up")}>有帮助</button><button className={feedback[message.id] === "down" ? "selected" : ""} aria-label="回答需改进" onClick={() => rateMessage(message, "down")}>需改进</button></div>}</div>
+          <div><small>{message.role === "assistant" ? `入职小助手${!started ? " · 示例对话" : ""}` : seed?.employee.name || "我"}</small><MessageContent content={message.content}/>{message.role === "assistant" && message.feedbackable && <><div className="demo-answer-source"><span>{showcaseMode ? "公开演示知识" : "企业知识库与员工档案"}</span><button onClick={() => copyMessage(message)}>复制回答</button></div><div className="demo-feedback"><span>这条回答有帮助吗？</span><button className={feedback[message.id] === "up" ? "selected" : ""} aria-label="回答有帮助" onClick={() => rateMessage(message, "up")}>有帮助</button><button className={feedback[message.id] === "down" ? "selected" : ""} aria-label="回答需改进" onClick={() => rateMessage(message, "down")}>需改进</button></div></>}</div>
           {message.role === "user" && <span className="demo-avatar user">{(seed?.employee.name || "我").slice(0, 1)}</span>}
         </article>)}
-        {typing && <article className="demo-message assistant typing-message"><span className="demo-avatar">AI</span><div><small>入职小助手</small><p>正在输入<span>···</span></p></div></article>}
+        {typing && <article className="demo-message assistant typing-message"><span className="demo-avatar">AI</span><div><small>入职小助手</small><div className="demo-bubble-text">正在输入<span>···</span></div></div></article>}
         <div ref={messageEndRef}/>
       </section>
 

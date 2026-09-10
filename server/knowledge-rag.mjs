@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readJson, readJsonOr, writeJson } from "./json-store.mjs";
+import { readJson, readJsonOr, updateJson } from "./json-store.mjs";
 import { cosineSimilarity, embedTexts, getEmbeddingRuntimeConfig, localEmbedding } from "./embedding.mjs";
 
 const CHUNK_FILE = "knowledge_chunks.json";
@@ -66,22 +66,22 @@ export async function indexKnowledgeDocument(document, options = {}) {
   const embedding = await embedTexts(chunks.map((item) => `${item.title}\n${item.section}\n${item.content}`), options);
   const now = new Date().toISOString();
   const indexed = chunks.map((item, index) => ({ ...item, embedding: embedding.vectors[index], embedding_provider: embedding.provider, embedding_model: embedding.model, indexed_at: now }));
-  const current = await readJsonOr(CHUNK_FILE, []);
-  await writeJson(CHUNK_FILE, [...current.filter((item) => item.document_id !== document.id), ...indexed]);
-  const documents = await readJson("knowledge_documents.json");
-  const position = documents.findIndex((item) => item.id === document.id);
-  if (position >= 0) {
-    documents[position] = { ...documents[position], chunk_count: indexed.length, index_status: "ready", embedding_provider: embedding.provider, embedding_model: embedding.model, indexed_at: now, updated_at: now };
-    await writeJson("knowledge_documents.json", documents);
-  }
+  await updateJson(CHUNK_FILE, (current) => [...current.filter((item) => item.document_id !== document.id), ...indexed], []);
+  await updateJson("knowledge_documents.json", (documents) => {
+    const position = documents.findIndex((item) => item.id === document.id);
+    if (position >= 0) documents[position] = { ...documents[position], chunk_count: indexed.length, index_status: "ready", embedding_provider: embedding.provider, embedding_model: embedding.model, indexed_at: now, updated_at: now };
+  });
   return { document_id: document.id, chunk_count: indexed.length, embedding_provider: embedding.provider, embedding_model: embedding.model, indexed_at: now };
 }
 
 export async function removeKnowledgeDocumentIndex(documentId) {
-  const current = await readJsonOr(CHUNK_FILE, []);
-  const next = current.filter((item) => item.document_id !== documentId);
-  if (next.length !== current.length) await writeJson(CHUNK_FILE, next);
-  return { removed_chunks: current.length - next.length };
+  let removedChunks = 0;
+  await updateJson(CHUNK_FILE, (current) => {
+    const next = current.filter((item) => item.document_id !== documentId);
+    removedChunks = current.length - next.length;
+    return next;
+  }, []);
+  return { removed_chunks: removedChunks };
 }
 
 function lexicalFeatures(value = "") {

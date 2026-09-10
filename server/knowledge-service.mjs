@@ -1,4 +1,4 @@
-import { readJson, writeJson, updateRecord } from "./json-store.mjs";
+import { readJson, updateJson, updateRecord } from "./json-store.mjs";
 import { sanitizeForStorage } from "./privacy.mjs";
 import { completeKnowledgeImportJob, deleteKnowledgeRawFile } from "./knowledge-ingestion.mjs";
 import { indexKnowledgeDocument, listKnowledgeDocumentChunks, removeKnowledgeDocumentIndex } from "./knowledge-rag.mjs";
@@ -43,10 +43,11 @@ function normalizeDocument(input, current = null) {
 export const listKnowledgeDocuments = () => readJson("knowledge_documents.json");
 
 export async function createKnowledgeDocument(input) {
-  const rows = await listKnowledgeDocuments();
   const document = normalizeDocument(input);
-  rows.unshift(document);
-  await writeJson("knowledge_documents.json", rows.slice(0, 500));
+  await updateJson("knowledge_documents.json", (rows) => {
+    rows.unshift(document);
+    return rows.slice(0, 500);
+  }, []);
   if (document.status === "active") await indexKnowledgeDocument(document);
   return (await listKnowledgeDocuments()).find((item) => item.id === document.id) || document;
 }
@@ -63,11 +64,12 @@ export async function saveKnowledgeDocument(id, patch) {
 }
 
 export async function deleteKnowledgeDocument(id) {
-  const rows = await listKnowledgeDocuments();
-  const next = rows.filter((item) => item.id !== id);
-  if (next.length === rows.length) throw new Error(`未找到知识文档 ${id}`);
-  const current = rows.find((item) => item.id === id);
-  await writeJson("knowledge_documents.json", next);
+  let current;
+  await updateJson("knowledge_documents.json", (rows) => {
+    current = rows.find((item) => item.id === id);
+    if (!current) throw new Error(`未找到知识文档 ${id}`);
+    return rows.filter((item) => item.id !== id);
+  }, []);
   await removeKnowledgeDocumentIndex(id);
   await deleteKnowledgeRawFile(current);
   return { id, deleted: true };

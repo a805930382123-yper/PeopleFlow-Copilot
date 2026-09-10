@@ -1,4 +1,5 @@
 import { aggregateTokenUsage, normalizeTokenUsage } from "./token-usage.mjs";
+import { getRuntimeEnv } from "./runtime-env.mjs";
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
 const DEFAULT_API_PATH = "/chat/completions";
@@ -6,7 +7,7 @@ const FIXTURE_PROVIDER = "classroom-fixture";
 const LIVE_PROVIDER = "openai-compatible";
 
 const numberFromEnv = (name, fallback, minimum = 0) => {
-  const value = Number(process.env[name]);
+  const value = Number(getRuntimeEnv(name));
   return Number.isFinite(value) && value >= minimum ? value : fallback;
 };
 
@@ -26,14 +27,14 @@ export class LlmConfigurationError extends Error {
   }
 }
 
-export function buildLlmEndpoint(baseUrl = process.env.LLM_BASE_URL, apiPath = process.env.LLM_API_PATH) {
+export function buildLlmEndpoint(baseUrl = getRuntimeEnv("LLM_BASE_URL"), apiPath = getRuntimeEnv("LLM_API_PATH")) {
   const base = normalizeBaseUrl(baseUrl);
   const path = (apiPath || DEFAULT_API_PATH).trim();
   if (/^https?:\/\//i.test(path)) return path;
   return `${base}/${path.replace(/^\/+/, "")}`;
 }
 
-export function resolveThinkingMode(endpoint, model, configuredMode = process.env.LLM_THINKING_MODE || "auto") {
+export function resolveThinkingMode(endpoint, model, configuredMode = getRuntimeEnv("LLM_THINKING_MODE") || "auto") {
   const mode = String(configuredMode || "auto").trim().toLowerCase();
   if (["enabled", "disabled"].includes(mode)) return mode;
   try {
@@ -57,23 +58,23 @@ function safeEndpoint(endpoint) {
 }
 
 function selectedProvider() {
-  const explicit = process.env.LLM_PROVIDER?.trim().toLowerCase();
+  const explicit = getRuntimeEnv("LLM_PROVIDER")?.trim().toLowerCase();
   if (explicit) return explicit;
-  if (process.env.LLM_API_KEY?.trim()) return LIVE_PROVIDER;
-  if ((process.env.LLM_MOCK_MODE || "").toLowerCase() === "true") return FIXTURE_PROVIDER;
+  if (getRuntimeEnv("LLM_API_KEY")?.trim()) return LIVE_PROVIDER;
+  if ((getRuntimeEnv("LLM_MOCK_MODE") || "").toLowerCase() === "true") return FIXTURE_PROVIDER;
   return "unconfigured";
 }
 
 export function getLlmRuntimeConfig(skill = {}) {
   const provider = selectedProvider();
   const endpoint = buildLlmEndpoint();
-  const globalModel = process.env.LLM_MODEL?.trim() || "";
+  const globalModel = getRuntimeEnv("LLM_MODEL")?.trim() || "";
   const fixture = provider === FIXTURE_PROVIDER;
   const live = provider === LIVE_PROVIDER;
   const useSkillModel = skill.model_strategy === "skill" && Boolean(skill.model?.trim());
   const selectedModel = useSkillModel ? skill.model.trim() : globalModel || skill.model || "";
   const missing = [];
-  if (live && !process.env.LLM_API_KEY?.trim()) missing.push("LLM_API_KEY");
+  if (live && !getRuntimeEnv("LLM_API_KEY")?.trim()) missing.push("LLM_API_KEY");
   if (live && !selectedModel) missing.push("LLM_MODEL");
   if (![FIXTURE_PROVIDER, LIVE_PROVIDER].includes(provider)) missing.push("LLM_PROVIDER");
   const model = fixture ? "deterministic-onboarding-fixture" : selectedModel || "未配置";
@@ -85,8 +86,8 @@ export function getLlmRuntimeConfig(skill = {}) {
     global_model: globalModel || null,
     model_source: fixture ? "fixture" : useSkillModel ? "skill" : globalModel ? "global" : "skill",
     endpoint: fixture ? "local://classroom-fixture" : safeEndpoint(endpoint),
-    json_mode: (process.env.LLM_JSON_MODE || "auto").toLowerCase(),
-    thinking_mode: (process.env.LLM_THINKING_MODE || "auto").toLowerCase(),
+    json_mode: (getRuntimeEnv("LLM_JSON_MODE") || "auto").toLowerCase(),
+    thinking_mode: (getRuntimeEnv("LLM_THINKING_MODE") || "auto").toLowerCase(),
     timeout_ms: numberFromEnv("LLM_TIMEOUT_MS", 60000, 1000),
     max_retries: numberFromEnv("LLM_MAX_RETRIES", 1, 0),
     fallback_to_mock: false,
@@ -139,7 +140,7 @@ function unsupportedJsonMode(status, detail) {
 }
 
 async function requestCompletion(skill, payload, config) {
-  const key = process.env.LLM_API_KEY.trim();
+  const key = getRuntimeEnv("LLM_API_KEY").trim();
   const endpoint = buildLlmEndpoint();
   const jsonMode = ["auto", "on", "off"].includes(config.json_mode) ? config.json_mode : "auto";
   let useResponseFormat = jsonMode !== "off";

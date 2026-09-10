@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readJsonOr, writeJson } from "./json-store.mjs";
+import { readJsonOr, updateJson } from "./json-store.mjs";
 
 export function nextPatchVersion(version = "1.0.0") {
   const match = String(version).match(/^(\d+)\.(\d+)\.(\d+)$/);
@@ -8,7 +8,6 @@ export function nextPatchVersion(version = "1.0.0") {
 }
 
 export async function snapshotVersion(file, entityId, content, changeNote = "保存前自动快照", source = "management") {
-  const rows = await readJsonOr(file, []);
   const snapshot = {
     id: `VER-${randomUUID()}`,
     entity_id: entityId,
@@ -18,8 +17,7 @@ export async function snapshotVersion(file, entityId, content, changeNote = "保
     source,
     content: structuredClone(content),
   };
-  rows.unshift(snapshot);
-  await writeJson(file, rows.slice(0, 500));
+  await updateJson(file, (rows) => [snapshot, ...rows].slice(0, 500), []);
   return snapshot;
 }
 

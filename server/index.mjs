@@ -1,62 +1,40 @@
-import http from "node:http";
-import { readJson, writeJson, updateRecord } from "./json-store.mjs";
-import { listSkills, getSkill, saveSkill, toggleSkill, skillVersions, skillVersion, restoreSkillVersion } from "./skill-registry.mjs";
-import { listTools, getTool, saveTool, createTool, deleteTool, duplicateTool, callTool, callToolDetailed, toolVersions, toolVersion, restoreToolVersion } from "./tool-registry.mjs";
-import { listPlans, getPlan, savePlan, getPlannerConfig, plannerVersions, plannerVersion, restorePlannerVersion } from "./plan-registry.mjs";
+import { readJson, updateJson, updateRecord } from "./json-store.mjs";
+import { listSkills } from "./skill-registry.mjs";
+import { listTools, getTool, saveTool, callTool, callToolDetailed } from "./tool-registry.mjs";
+import { listPlans } from "./plan-registry.mjs";
 import { createPlan } from "./planner.mjs";
-import { executePlan, testSkill } from "./executor.mjs";
+import { executePlan } from "./executor.mjs";
 import { appendLog, saveLog } from "./logger.mjs";
 import { validatePlan } from "./plan-validator.mjs";
 import { annotateRun, explainRun, getRun, listRuns } from "./run-service.mjs";
 import { resumeCozeWorkflowDetailed } from "./coze-workflow.mjs";
 import { exportConfiguration, importConfiguration } from "./config-service.mjs";
-import { getLlmRuntimeConfig, testLlmConnection } from "./llm.mjs";
-import { getLlmConfig, initializeLlmConfig, switchLlmProvider, testManagedLlmConnection, updateLlmConfig } from "./llm-config-service.mjs";
-import {
-  batchUpdateEvaluationCases,
-  createBadCase,
-  createEvaluationCase,
-  deleteEvaluationCase,
-  duplicateEvaluationCase,
-  evaluationOverview,
-  getEvaluationCase,
-  listEvaluationCases,
-  listEvaluationRuns,
-  promoteFailures,
-  runEvaluation,
-  runEvaluationCase,
-  updateEvaluationCase,
-} from "./evaluation.mjs";
+import { getLlmRuntimeConfig } from "./llm.mjs";
+import { initializeLlmConfig } from "./llm-config-service.mjs";
+import { listEvaluationCases } from "./evaluation.mjs";
 import { getAnalytics } from "./analytics.mjs";
 import { assessSensitiveRequest, assertSelfAccess, sanitizeForStorage } from "./privacy.mjs";
-import { createKnowledgeDocument, deleteKnowledgeDocument, documentStats, knowledgeDocumentChunks, listKnowledgeDocuments, publishKnowledgeDocument, reindexKnowledgeDocument, saveKnowledgeDocument } from "./knowledge-service.mjs";
-import { ingestKnowledgeFile, listKnowledgeImportJobs } from "./knowledge-ingestion.mjs";
-import { ensureKnowledgeIndex, knowledgeRagStats, searchKnowledgeDocuments } from "./knowledge-rag.mjs";
+import { documentStats, listKnowledgeDocuments } from "./knowledge-service.mjs";
+import { listKnowledgeImportJobs } from "./knowledge-ingestion.mjs";
+import { ensureKnowledgeIndex, knowledgeRagStats } from "./knowledge-rag.mjs";
 import { aggregateTokenUsage } from "./token-usage.mjs";
-import { getTokenMonitorConfig, updateTokenMonitorConfig } from "./token-monitor-service.mjs";
-import { reloadRuntimeSecrets } from "./runtime-env.mjs";
+import { getRuntimeEnv } from "./runtime-env.mjs";
+import { readRequestBody as body, send } from "./http.mjs";
+import { handleSystemRoutes } from "./routes/system.mjs";
+import { handleManagementRoutes } from "./routes/management.mjs";
+import { handleKnowledgeRoutes } from "./routes/knowledge.mjs";
+import { handleEvaluationRoutes } from "./routes/evaluation.mjs";
 
-const port = Number(process.env.API_PORT || 8787);
-await initializeLlmConfig();
-await ensureKnowledgeIndex();
-const send = (res, status, data, headers = {}) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS", ...headers }); res.end(JSON.stringify(data)); };
-const sendData = (res, status, data) => send(res, status, { ok: true, data });
-const body = async (req) => {
-  const parts = [];
-  let bytes = 0;
-  for await (const chunk of req) {
-    bytes += chunk.length;
-    if (bytes > 30 * 1024 * 1024) throw Object.assign(new Error("请求内容不能超过 30MB"), { code: "REQUEST_TOO_LARGE" });
-    parts.push(chunk);
-  }
-  return parts.length ? JSON.parse(Buffer.concat(parts).toString("utf8")) : {};
-};
+let initializationPromise;
+export function initializeApi() {
+  initializationPromise ||= Promise.all([initializeLlmConfig(), ensureKnowledgeIndex()]);
+  return initializationPromise;
+}
 const id = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 
 async function prepend(file, entry, limit = 100) {
-  const rows = await readJson(file);
-  rows.unshift(sanitizeForStorage(entry));
-  await writeJson(file, rows.slice(0, limit));
+  const sanitized = sanitizeForStorage(entry);
+  await updateJson(file, (rows) => [sanitized, ...rows].slice(0, limit), []);
   return entry;
 }
 
@@ -168,10 +146,18 @@ async function executeAgent(input, options = {}) {
       duration_ms: Date.now() - started,
     };
     await saveLog(execution);
-    conversation.messages.push({ id: userMessageId, role: "user", content: input.question, created_at: execution.created_at }, { id: responseMessageId, execution_id: execution.id, role: "assistant", content: result.final_reply, evidence: result.evidence, risk_level: result.risk_review.risk_level, created_at: new Date().toISOString() });
-    conversation.messages = conversation.messages.slice(-20);
-    conversation.updated_at = new Date().toISOString();
-    await writeJson("conversations.json", conversations.slice(0, 100).map(sanitizeForStorage));
+    const userMessage = { id: userMessageId, role: "user", content: input.question, created_at: execution.created_at };
+    const assistantMessage = { id: responseMessageId, execution_id: execution.id, role: "assistant", content: result.final_reply, evidence: result.evidence, risk_level: result.risk_review.risk_level, created_at: new Date().toISOString() };
+    await updateJson("conversations.json", (rows) => {
+      let current = rows.find((item) => item.id === conversation.id);
+      if (!current) {
+        current = { ...conversation, messages: [] };
+        rows.unshift(current);
+      }
+      current.messages = [...(current.messages || []), userMessage, assistantMessage].slice(-20);
+      current.updated_at = new Date().toISOString();
+      return rows.slice(0, 100).map(sanitizeForStorage);
+    }, []);
     const securityAssessment = assessSensitiveRequest(input.question);
     if (["high", "critical"].includes(securityAssessment.level)) await prepend("security_events.json", { id: id("SEC"), execution_id: execution.id, conversation_id: conversation.id, employee_id: input.employee_id, category: securityAssessment.category, action: securityAssessment.action, reason: securityAssessment.reason, risk_level: securityAssessment.level, created_at: new Date().toISOString() }, 500);
     if (["high", "critical"].includes(result.risk_review.risk_level)) {
@@ -277,17 +263,75 @@ async function runToolTest(tool, input, rerunOf = null) {
 }
 
 async function bootstrap() {
-  const [employees, skills, tools, plans, logs, toolTests, cozeSessions, conversations, handoffs, evaluationCases, evaluationRuns, accessPolicies, analytics, knowledgeDocuments, knowledgeImportJobs, knowledgeRuntime, conversationFeedback, securityEvents] = await Promise.all([readJson("employees.json"), listSkills(), listTools(), listPlans(), readJson("execution_logs.json"), readJson("tool_test_logs.json"), readJson("coze_sessions.json"), readJson("conversations.json"), readJson("handoffs.json"), listEvaluationCases(), readJson("evaluation_runs.json"), readJson("access_policies.json"), getAnalytics(), listKnowledgeDocuments(), listKnowledgeImportJobs(), knowledgeRagStats(), readJson("conversation_feedback.json"), readJson("security_events.json")]);
+  const loaders = {
+    employees: () => readJson("employees.json"),
+    skills: () => listSkills(),
+    tools: () => listTools(),
+    plans: () => listPlans(),
+    logs: () => readJson("execution_logs.json"),
+    toolTests: () => readJson("tool_test_logs.json"),
+    cozeSessions: () => readJson("coze_sessions.json"),
+    conversations: () => readJson("conversations.json"),
+    handoffs: () => readJson("handoffs.json"),
+    evaluationCases: () => listEvaluationCases(),
+    evaluationRuns: () => readJson("evaluation_runs.json"),
+    accessPolicies: () => readJson("access_policies.json"),
+    analytics: () => getAnalytics(),
+    knowledgeDocuments: () => listKnowledgeDocuments(),
+    knowledgeImportJobs: () => listKnowledgeImportJobs(),
+    knowledgeRuntime: () => knowledgeRagStats(),
+    conversationFeedback: () => readJson("conversation_feedback.json"),
+    securityEvents: () => readJson("security_events.json"),
+  };
+  const fallback = {
+    employees: [], skills: [], tools: [], plans: [], logs: [], toolTests: [], cozeSessions: [], conversations: [], handoffs: [],
+    evaluationCases: [], evaluationRuns: [], accessPolicies: [], analytics: null, knowledgeDocuments: [], knowledgeImportJobs: [],
+    knowledgeRuntime: { documents: 0, active_documents: 0, indexed_documents: 0, chunks: 0, embedding: { provider: "local-hash", model: "local-chinese-ngram-v1", configured: true } },
+    conversationFeedback: [], securityEvents: [],
+  };
+  const values = { ...fallback };
+  const bootstrapErrors = [];
+  await Promise.all(Object.entries(loaders).map(async ([name, loader]) => {
+    try { values[name] = await loader(); }
+    catch (error) {
+      const issue = { source: name, code: error.code || "BOOTSTRAP_SOURCE_FAILED", message: error.message || "数据加载失败" };
+      bootstrapErrors.push(issue);
+      console.error(`[bootstrap:${name}]`, issue.code, issue.message);
+    }
+  }));
+  const { employees, skills, tools, plans, logs, toolTests, cozeSessions, conversations, handoffs, evaluationCases, evaluationRuns, accessPolicies, analytics, knowledgeDocuments, knowledgeImportJobs, knowledgeRuntime, conversationFeedback, securityEvents } = values;
   const llm = getLlmRuntimeConfig();
   const runtimeSkills = skills.map((skill) => ({ ...skill, effective_model: llm.model, model_source: llm.model_source }));
-  return { employees, skills: runtimeSkills, tools: tools.map(publicTool), plans, logs, tool_tests: toolTests, coze_sessions: cozeSessions, conversations, conversation_feedback: conversationFeedback, handoffs, knowledge_documents: knowledgeDocuments, knowledge_stats: documentStats(knowledgeDocuments), knowledge_import_jobs: knowledgeImportJobs, knowledge_runtime: knowledgeRuntime, security_events: securityEvents, evaluation_cases: evaluationCases.filter((item) => !item.isBadCase), bad_case_evaluation_cases: evaluationCases.filter((item) => item.isBadCase), evaluation_runs: evaluationRuns, access_policies: accessPolicies, analytics, llm, api_base: `http://127.0.0.1:${port}/api` };
+  return { bootstrap_status: bootstrapErrors.length ? "partial" : "ok", bootstrap_errors: bootstrapErrors, employees, skills: runtimeSkills, tools: tools.map(publicTool), plans, logs, tool_tests: toolTests, coze_sessions: cozeSessions, conversations, conversation_feedback: conversationFeedback, handoffs, knowledge_documents: knowledgeDocuments, knowledge_stats: documentStats(knowledgeDocuments), knowledge_import_jobs: knowledgeImportJobs, knowledge_runtime: knowledgeRuntime, security_events: securityEvents, evaluation_cases: evaluationCases.filter((item) => !item.isBadCase), bad_case_evaluation_cases: evaluationCases.filter((item) => item.isBadCase), evaluation_runs: evaluationRuns, access_policies: accessPolicies, analytics, llm, api_base: "/api" };
+}
+
+async function dataHealth() {
+  const datasets = {
+    employees: () => readJson("employees.json"),
+    knowledge_documents: () => readJson("knowledge_documents.json"),
+    knowledge_chunks: () => readJson("knowledge_chunks.json"),
+    skills: () => readJson("skills.json"),
+    tools: () => readJson("tools.json"),
+    plans: () => readJson("plans.json"),
+    execution_logs: () => readJson("execution_logs.json"),
+  };
+  const checks = await Promise.all(Object.entries(datasets).map(async ([name, loader]) => {
+    try {
+      const value = await loader();
+      return [name, { ok: true, count: Array.isArray(value) ? value.length : 1 }];
+    } catch (error) {
+      return [name, { ok: false, count: 0, code: error.code || "DATASET_READ_FAILED", message: error.message || "数据读取失败" }];
+    }
+  }));
+  const result = Object.fromEntries(checks);
+  return { status: Object.values(result).every((item) => item.ok) ? "ok" : "partial", datasets: result, checked_at: new Date().toISOString() };
 }
 
 function publicTool(tool) {
   return {
     ...tool,
     headers: Object.fromEntries(Object.keys(tool.headers || {}).map((key) => [key, "***configured***"])),
-    auth_configured: Boolean(tool.auth_env_var && process.env[tool.auth_env_var]?.trim()),
+    auth_configured: Boolean(tool.auth_env_var && getRuntimeEnv(tool.auth_env_var)?.trim()),
   };
 }
 
@@ -346,151 +390,15 @@ async function streamAgentRun(req, res) {
   } finally { res.end(); }
 }
 
-const server = http.createServer(async (req, res) => {
+export async function handleNodeApiRequest(req, res) {
+  await initializeApi();
   if (req.method === "OPTIONS") return send(res, 204, {});
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
-    if (req.method === "GET" && url.pathname === "/api/health") {
-      const llm = getLlmRuntimeConfig();
-      return send(res, 200, { ok: true, mode: llm.mode, llm_mode: llm.mode, llm_provider: llm.provider, llm_model: llm.model, llm_model_source: llm.model_source, planner_mode: (process.env.PLANNER_MODE || "hybrid").toLowerCase(), llm_endpoint: llm.endpoint, llm_configured: llm.configured, coze_mode: process.env.COZE_API_TOKEN ? "live" : (process.env.COZE_MOCK_MODE || "false").toLowerCase() === "true" ? "mock" : "unconfigured", version: "1.6.0" });
-    }
-    if (req.method === "POST" && url.pathname === "/api/system/reload-env") {
-      const result = reloadRuntimeSecrets();
-      const llm = getLlmRuntimeConfig();
-      return send(res, 200, { ok: true, ...result, llm_configured: llm.configured, missing: llm.missing });
-    }
-    if (req.method === "GET" && url.pathname === "/api/bootstrap") return send(res, 200, await bootstrap());
-    if (req.method === "GET" && url.pathname === "/api/demo/bootstrap") return send(res, 200, await demoBootstrap(url.searchParams.get("employee_id") || "E001"));
-    if (req.method === "GET" && url.pathname === "/api/analytics") return send(res, 200, await getAnalytics({ days: Number(url.searchParams.get("days") || 30), source: url.searchParams.get("source") || "all" }));
-    if (req.method === "GET" && url.pathname === "/api/token-monitor/config") return send(res, 200, await getTokenMonitorConfig());
-    if (req.method === "PUT" && url.pathname === "/api/token-monitor/config") return send(res, 200, await updateTokenMonitorConfig(await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/llm/test") return send(res, 200, await testLlmConnection());
-    if (req.method === "GET" && url.pathname === "/api/skills") return sendData(res, 200, await managementSkills());
-    if (req.method === "GET" && url.pathname === "/api/tools") return sendData(res, 200, await managementTools());
-    if (req.method === "GET" && url.pathname === "/api/planner") return sendData(res, 200, { planner: await getPlannerConfig(), skills: await listSkills(), tools: (await listTools()).map(publicTool), versions: await plannerVersions() });
-    if (req.method === "PUT" && url.pathname === "/api/planner") return sendData(res, 200, await savePlan("default_onboarding_plan", await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/planner/preview") return sendData(res, 200, await previewPlanner(await body(req)));
-    if (req.method === "GET" && url.pathname === "/api/planner/versions") return sendData(res, 200, await plannerVersions());
-    if (req.method === "GET" && url.pathname === "/api/llm-config") return sendData(res, 200, await getLlmConfig());
-    if (req.method === "PUT" && url.pathname === "/api/llm-config") return sendData(res, 200, await updateLlmConfig(await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/llm-config/switch") return sendData(res, 200, await switchLlmProvider(await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/llm-config/test") return sendData(res, 200, await testManagedLlmConnection());
-
-    const plannerVersionRestore = url.pathname.match(/^\/api\/planner\/versions\/([^/]+)\/restore$/);
-    const plannerVersionMatch = url.pathname.match(/^\/api\/planner\/versions\/([^/]+)$/);
-    if (req.method === "GET" && plannerVersionMatch) return sendData(res, 200, await plannerVersion("default_onboarding_plan", plannerVersionMatch[1]));
-    if (req.method === "POST" && plannerVersionRestore) return sendData(res, 200, await restorePlannerVersion("default_onboarding_plan", plannerVersionRestore[1], (await body(req)).change_note));
-
-    const skillVersionRestore = url.pathname.match(/^\/api\/skills\/([^/]+)\/versions\/([^/]+)\/restore$/);
-    const skillVersionMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/versions\/([^/]+)$/);
-    const skillVersionsMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/versions$/);
-    const skillToggleMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/toggle$/);
-    const skillDetailMatch = url.pathname.match(/^\/api\/skills\/([^/]+)$/);
-    if (req.method === "GET" && skillVersionsMatch) return sendData(res, 200, await skillVersions(skillVersionsMatch[1]));
-    if (req.method === "GET" && skillVersionMatch) return sendData(res, 200, await skillVersion(skillVersionMatch[1], skillVersionMatch[2]));
-    if (req.method === "POST" && skillVersionRestore) return sendData(res, 200, await restoreSkillVersion(skillVersionRestore[1], skillVersionRestore[2], (await body(req)).change_note));
-    if (req.method === "POST" && skillToggleMatch) { const payload = await body(req); return sendData(res, 200, await toggleSkill(skillToggleMatch[1], payload.enabled, payload.change_note)); }
-    if (req.method === "GET" && skillDetailMatch) return sendData(res, 200, await getSkill(skillDetailMatch[1], false));
-
-    const toolVersionRestore = url.pathname.match(/^\/api\/tools\/([^/]+)\/versions\/([^/]+)\/restore$/);
-    const toolVersionMatch = url.pathname.match(/^\/api\/tools\/([^/]+)\/versions\/([^/]+)$/);
-    const toolVersionsMatch = url.pathname.match(/^\/api\/tools\/([^/]+)\/versions$/);
-    const toolTestsMatch = url.pathname.match(/^\/api\/tools\/([^/]+)\/tests$/);
-    const toolToggleMatch = url.pathname.match(/^\/api\/tools\/([^/]+)\/toggle$/);
-    const toolDetailMatch = url.pathname.match(/^\/api\/tools\/([^/]+)$/);
-    if (req.method === "GET" && toolVersionsMatch) return sendData(res, 200, await toolVersions(toolVersionsMatch[1]));
-    if (req.method === "GET" && toolVersionMatch) return sendData(res, 200, await toolVersion(toolVersionMatch[1], toolVersionMatch[2]));
-    if (req.method === "POST" && toolVersionRestore) return sendData(res, 200, await restoreToolVersion(toolVersionRestore[1], toolVersionRestore[2], (await body(req)).change_note));
-    if (req.method === "GET" && toolTestsMatch) return sendData(res, 200, (await readJson("tool_test_logs.json")).filter((item) => item.tool_id === toolTestsMatch[1]));
-    if (req.method === "POST" && toolToggleMatch) { const payload = await body(req); return sendData(res, 200, await saveTool(toolToggleMatch[1], { enabled: payload.enabled, change_note: payload.change_note })); }
-    if (req.method === "GET" && toolDetailMatch) return sendData(res, 200, publicTool(await getTool(toolDetailMatch[1], false)));
-    if (req.method === "GET" && url.pathname === "/api/eval") return send(res, 200, await evaluationOverview({ skills: await listSkills(), tools: await listTools() }));
-    if (req.method === "GET" && url.pathname === "/api/eval/cases") return send(res, 200, await listEvaluationCases({ suite: url.searchParams.get("suite") || "all" }));
-    if (req.method === "POST" && url.pathname === "/api/eval/cases") return send(res, 201, await createEvaluationCase(await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/eval/cases/from-run") {
-      const payload = await body(req);
-      const source = await getRun(payload.runId || payload.run_id);
-      return send(res, 201, await createEvaluationCase({
-        ...payload,
-        question: payload.question || source.question,
-        employeeId: payload.employeeId || source.employee_id || source.employee?.id,
-        sourceRunId: source.id,
-        inputRiskLevel: payload.inputRiskLevel || source.risk_review?.risk_level || "low",
-        expectedRiskResult: payload.expectedRiskResult || { inputRiskLevel: source.risk_review?.risk_level || "low", replyShouldBeSafe: true, replyAllowed: true, handoffRequired: Boolean(source.handoff) },
-        requiredCapabilities: payload.requiredCapabilities || source.steps?.map((step) => step.capability_id) || [],
-        expectedEvidence: payload.expectedEvidence || { required: Boolean(source.evidence?.length), minCount: source.evidence?.length ? 1 : 0 },
-      }));
-    }
-    if (req.method === "POST" && url.pathname === "/api/eval/cases/from-failure") {
-      const payload = await body(req);
-      const sourceRun = (await listEvaluationRuns()).find((item) => item.id === payload.evalRunId || item.runId === payload.runId);
-      if (!sourceRun) throw Object.assign(new Error("评测运行不存在"), { code: "EVAL_RUN_NOT_FOUND" });
-      const sourceCase = await getEvaluationCase(sourceRun.caseId);
-      return send(res, 201, await createEvaluationCase({ ...sourceCase, id: undefined, name: `${sourceCase.name}（失败回流）`, isBadCase: true, sourceRunId: sourceRun.runId, failure_mode: sourceRun.scoreResult?.reason || "评测失败回流" }));
-    }
-    if (req.method === "POST" && url.pathname === "/api/eval/cases/batch-update") return send(res, 200, await batchUpdateEvaluationCases(await body(req)));
-    if (req.method === "GET" && url.pathname === "/api/eval/runs") return send(res, 200, await listEvaluationRuns({ caseId: url.searchParams.get("caseId") || undefined }));
-    if (req.method === "GET" && url.pathname === "/api/eval/compare") {
-      const rows = await readJson("evaluation_runs.json");
-      const left = rows.find((item) => item.id === url.searchParams.get("left"));
-      const right = rows.find((item) => item.id === url.searchParams.get("right"));
-      if (!left || !right) throw Object.assign(new Error("请选择两个有效评测批次"), { code: "EVAL_COMPARE_BATCH_REQUIRED" });
-      return send(res, 200, {
-        left,
-        right,
-        delta: {
-          pass_rate: Number((right.pass_rate - left.pass_rate).toFixed(3)),
-          route_accuracy: Number((right.route_accuracy - left.route_accuracy).toFixed(3)),
-          risk_accuracy: Number((right.risk_accuracy - left.risk_accuracy).toFixed(3)),
-          availability_rate: Number(((right.availability_rate || 0) - (left.availability_rate || 0)).toFixed(3)),
-          duration_ms: (right.duration_ms || 0) - (left.duration_ms || 0),
-        },
-      });
-    }
-    if (req.method === "GET" && url.pathname === "/api/eval/batches") return send(res, 200, await readJson("evaluation_runs.json"));
-    if (req.method === "POST" && url.pathname === "/api/eval/batches") return send(res, 201, await runEvaluation(await body(req), { agentRunner: executeAgent }));
-    const evalBatchRetry = url.pathname.match(/^\/api\/eval\/batches\/([^/]+)\/retry$/);
-    const evalBatchStop = url.pathname.match(/^\/api\/eval\/batches\/([^/]+)\/stop$/);
-    const evalBatchMatch = url.pathname.match(/^\/api\/eval\/batches\/([^/]+)$/);
-    if (req.method === "GET" && evalBatchMatch) {
-      const batch = (await readJson("evaluation_runs.json")).find((item) => item.id === evalBatchMatch[1]);
-      if (!batch) throw Object.assign(new Error("评测批次不存在"), { code: "EVAL_BATCH_NOT_FOUND" });
-      return send(res, 200, batch);
-    }
-    if (req.method === "POST" && evalBatchRetry) {
-      const batch = (await readJson("evaluation_runs.json")).find((item) => item.id === evalBatchRetry[1]);
-      if (!batch) throw Object.assign(new Error("评测批次不存在"), { code: "EVAL_BATCH_NOT_FOUND" });
-      const payload = await body(req);
-      const statuses = Array.isArray(payload.statuses) && payload.statuses.length ? payload.statuses : ["FAIL", "ERROR"];
-      const caseIds = (batch.eval_runs || []).filter((item) => statuses.includes(item.status)).map((item) => item.caseId);
-      if (!caseIds.length) throw Object.assign(new Error("该批次没有符合重试条件的用例"), { code: "EVAL_RETRY_EMPTY" });
-      return send(res, 201, await runEvaluation({ suite: "all", caseIds, limit: caseIds.length, name: `${batch.name || batch.id} · 重试` }, { agentRunner: executeAgent }));
-    }
-    if (req.method === "POST" && evalBatchStop) {
-      const rows = await readJson("evaluation_runs.json");
-      const index = rows.findIndex((item) => item.id === evalBatchStop[1]);
-      if (index < 0) throw Object.assign(new Error("评测批次不存在"), { code: "EVAL_BATCH_NOT_FOUND" });
-      rows[index] = { ...rows[index], status: rows[index].status === "running" ? "stopped" : rows[index].status, stop_requested_at: new Date().toISOString() };
-      await writeJson("evaluation_runs.json", rows);
-      return send(res, 200, rows[index]);
-    }
-    const evalCaseRun = url.pathname.match(/^\/api\/eval\/cases\/([^/]+)\/run$/);
-    const evalCaseDuplicate = url.pathname.match(/^\/api\/eval\/cases\/([^/]+)\/duplicate$/);
-    const evalCaseMatch = url.pathname.match(/^\/api\/eval\/cases\/([^/]+)$/);
-    if (req.method === "POST" && evalCaseRun) return send(res, 200, await runEvaluationCase(evalCaseRun[1], executeAgent, await body(req)));
-    if (req.method === "POST" && evalCaseDuplicate) return send(res, 201, await duplicateEvaluationCase(evalCaseDuplicate[1]));
-    if (req.method === "GET" && evalCaseMatch) return send(res, 200, await getEvaluationCase(evalCaseMatch[1]));
-    if (req.method === "PATCH" && evalCaseMatch) return send(res, 200, await updateEvaluationCase(evalCaseMatch[1], await body(req)));
-    if (req.method === "DELETE" && evalCaseMatch) return send(res, 200, await deleteEvaluationCase(evalCaseMatch[1]));
-    if (req.method === "POST" && url.pathname === "/api/evaluations/run") return send(res, 200, await runEvaluation(await body(req), { agentRunner: executeAgent }));
-    if (req.method === "POST" && url.pathname === "/api/evaluations/cases") return send(res, 201, await createBadCase(await body(req)));
-    const evaluationPromote = url.pathname.match(/^\/api\/evaluations\/runs\/([^/]+)\/promote-failures$/);
-    if (req.method === "POST" && evaluationPromote) return send(res, 200, await promoteFailures(evaluationPromote[1]));
-    if (req.method === "POST" && url.pathname === "/api/knowledge-documents") return send(res, 201, await createKnowledgeDocument(await body(req)));
-    if (req.method === "POST" && url.pathname === "/api/knowledge-files") return send(res, 201, await ingestKnowledgeFile(await body(req)));
-    if (req.method === "GET" && url.pathname === "/api/knowledge-import-jobs") return send(res, 200, await listKnowledgeImportJobs());
-    if (req.method === "GET" && url.pathname === "/api/knowledge-runtime") return send(res, 200, await knowledgeRagStats());
-    if (req.method === "POST" && url.pathname === "/api/knowledge-search/preview") return send(res, 200, await searchKnowledgeDocuments(await body(req)));
+    if (await handleSystemRoutes(req, res, url, { bootstrap, dataHealth, demoBootstrap })) return;
+    if (await handleManagementRoutes(req, res, url, { managementSkills, managementTools, listSkills, listTools, publicTool, previewPlanner, runToolTest })) return;
+    if (await handleKnowledgeRoutes(req, res, url)) return;
+    if (await handleEvaluationRoutes(req, res, url, { listSkills, listTools, getRun, executeAgent })) return;
     if (req.method === "GET" && url.pathname === "/api/config/export") return send(res, 200, await exportConfiguration(), { "Content-Disposition": `attachment; filename="peopleflow-config-${new Date().toISOString().slice(0, 10)}.json"` });
     if (req.method === "POST" && url.pathname === "/api/config/import") return send(res, 200, await importConfiguration(await body(req)));
     if (req.method === "POST" && url.pathname === "/api/agent/run") return streamAgentRun(req, res);
@@ -500,8 +408,6 @@ const server = http.createServer(async (req, res) => {
       const payload = await body(req);
       return send(res, 200, explainRun(await getRun(payload.run_id)));
     }
-    if (req.method === "POST" && url.pathname === "/api/tools") return send(res, 201, await createTool(await body(req)));
-
     const runRetry = url.pathname.match(/^\/api\/runs\/([^/]+)\/retry$/);
     const runHandoff = url.pathname.match(/^\/api\/runs\/([^/]+)\/handoff$/);
     const runAnnotate = url.pathname.match(/^\/api\/runs\/([^/]+)\/annotate$/);
@@ -522,16 +428,6 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && runAnnotate) return send(res, 200, await annotateRun(runAnnotate[1], await body(req)));
 
-    const knowledgeDocumentMatch = url.pathname.match(/^\/api\/knowledge-documents\/([^/]+)$/);
-    const knowledgeDocumentPublish = url.pathname.match(/^\/api\/knowledge-documents\/([^/]+)\/publish$/);
-    const knowledgeDocumentReindex = url.pathname.match(/^\/api\/knowledge-documents\/([^/]+)\/reindex$/);
-    const knowledgeDocumentChunksMatch = url.pathname.match(/^\/api\/knowledge-documents\/([^/]+)\/chunks$/);
-    if (req.method === "POST" && knowledgeDocumentPublish) return send(res, 200, await publishKnowledgeDocument(knowledgeDocumentPublish[1], await body(req)));
-    if (req.method === "POST" && knowledgeDocumentReindex) return send(res, 200, await reindexKnowledgeDocument(knowledgeDocumentReindex[1]));
-    if (req.method === "GET" && knowledgeDocumentChunksMatch) return send(res, 200, await knowledgeDocumentChunks(knowledgeDocumentChunksMatch[1]));
-    if (req.method === "PUT" && knowledgeDocumentMatch) return send(res, 200, await saveKnowledgeDocument(knowledgeDocumentMatch[1], await body(req)));
-    if (req.method === "DELETE" && knowledgeDocumentMatch) return send(res, 200, await deleteKnowledgeDocument(knowledgeDocumentMatch[1]));
-
     const conversationMessage = url.pathname.match(/^\/api\/conversations\/([^/]+)\/messages$/);
     const conversationFeedback = url.pathname.match(/^\/api\/conversations\/([^/]+)\/feedback$/);
     const conversationHandoff = url.pathname.match(/^\/api\/conversations\/([^/]+)\/handoff$/);
@@ -544,19 +440,25 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && conversationFeedback) {
       const payload = await body(req);
-      const conversationRows = await readJson("conversations.json");
-      const conversation = conversationRows.find((item) => item.id === conversationFeedback[1]);
-      if (!conversation) throw new Error("多轮会话不存在");
       if (!["up", "down"].includes(payload.rating)) throw new Error("评价只能是 up 或 down");
-      const indexedMessage = Number.isInteger(payload.message_index) ? conversation.messages[payload.message_index] : null;
-      const targetMessage = payload.message_id ? conversation.messages.find((item) => item.id === payload.message_id && item.role === "assistant") : indexedMessage?.role === "assistant" ? indexedMessage : [...conversation.messages].reverse().find((item) => item.role === "assistant");
-      if (!targetMessage) throw new Error("未找到可评价的助手回复");
-      if (!targetMessage.id) { targetMessage.id = id("MSG"); await writeJson("conversations.json", conversationRows.map(sanitizeForStorage)); }
-      const feedbackRows = await readJson("conversation_feedback.json");
-      const existing = feedbackRows.find((item) => item.conversation_id === conversation.id && item.message_id === targetMessage.id);
-      const record = sanitizeForStorage({ id: existing?.id || id("FDBK"), conversation_id: conversation.id, message_id: targetMessage.id, execution_id: targetMessage.execution_id || null, employee_id: conversation.employee_id, rating: payload.rating, tags: Array.isArray(payload.tags) ? payload.tags.map(String).slice(0, 8) : [], comment: String(payload.comment || "").slice(0, 500), created_at: existing?.created_at || new Date().toISOString(), updated_at: new Date().toISOString() });
-      if (existing) Object.assign(existing, record); else feedbackRows.unshift(record);
-      await writeJson("conversation_feedback.json", feedbackRows.slice(0, 1000));
+      let conversation;
+      let targetMessage;
+      await updateJson("conversations.json", (rows) => {
+        conversation = rows.find((item) => item.id === conversationFeedback[1]);
+        if (!conversation) throw new Error("多轮会话不存在");
+        const indexedMessage = Number.isInteger(payload.message_index) ? conversation.messages[payload.message_index] : null;
+        targetMessage = payload.message_id ? conversation.messages.find((item) => item.id === payload.message_id && item.role === "assistant") : indexedMessage?.role === "assistant" ? indexedMessage : [...conversation.messages].reverse().find((item) => item.role === "assistant");
+        if (!targetMessage) throw new Error("未找到可评价的助手回复");
+        if (!targetMessage.id) targetMessage.id = id("MSG");
+        return rows.map(sanitizeForStorage);
+      });
+      let record;
+      await updateJson("conversation_feedback.json", (feedbackRows) => {
+        const existing = feedbackRows.find((item) => item.conversation_id === conversation.id && item.message_id === targetMessage.id);
+        record = sanitizeForStorage({ id: existing?.id || id("FDBK"), conversation_id: conversation.id, message_id: targetMessage.id, execution_id: targetMessage.execution_id || null, employee_id: conversation.employee_id, rating: payload.rating, tags: Array.isArray(payload.tags) ? payload.tags.map(String).slice(0, 8) : [], comment: String(payload.comment || "").slice(0, 500), created_at: existing?.created_at || new Date().toISOString(), updated_at: new Date().toISOString() });
+        if (existing) Object.assign(existing, record); else feedbackRows.unshift(record);
+        return feedbackRows.slice(0, 1000);
+      });
       return send(res, 200, record);
     }
     if (req.method === "POST" && conversationHandoff) {
@@ -571,11 +473,11 @@ const server = http.createServer(async (req, res) => {
       return send(res, 200, await updateRecord("conversations.json", conversationMatch[1], { name: String(patch.name || "").trim().slice(0, 40) || "未命名会话", status: patch.status === "archived" ? "archived" : "active", updated_at: new Date().toISOString() }));
     }
     if (req.method === "DELETE" && conversationMatch) {
-      const conversations = await readJson("conversations.json");
-      if (!conversations.some((item) => item.id === conversationMatch[1])) throw new Error("多轮会话不存在");
-      await writeJson("conversations.json", conversations.filter((item) => item.id !== conversationMatch[1]));
-      const feedbackRows = await readJson("conversation_feedback.json");
-      await writeJson("conversation_feedback.json", feedbackRows.filter((item) => item.conversation_id !== conversationMatch[1]));
+      await updateJson("conversations.json", (conversations) => {
+        if (!conversations.some((item) => item.id === conversationMatch[1])) throw new Error("多轮会话不存在");
+        return conversations.filter((item) => item.id !== conversationMatch[1]);
+      });
+      await updateJson("conversation_feedback.json", (feedbackRows) => feedbackRows.filter((item) => item.conversation_id !== conversationMatch[1]));
       return send(res, 200, { id: conversationMatch[1], deleted: true });
     }
 
@@ -591,49 +493,6 @@ const server = http.createServer(async (req, res) => {
       const previous = (await readJson("execution_logs.json")).find((item) => item.id === executionRerun[1]);
       if (!previous) throw new Error("执行记录不存在");
       return send(res, 200, await executeAgent({ employee_id: previous.employee_id || previous.employee?.id, question: previous.question, plan_id: previous.plan?.id, retry_of: previous.id }, { source: "retry" }));
-    }
-
-    const skillMatch = url.pathname.match(/^\/api\/skills\/([^/]+)$/);
-    const skillTestMatch = url.pathname.match(/^\/api\/skills\/([^/]+)\/test$/);
-    if (req.method === "PUT" && skillMatch) return send(res, 200, await saveSkill(skillMatch[1], await body(req)));
-    if (req.method === "POST" && skillTestMatch) {
-      const skill = await getSkill(skillTestMatch[1], false);
-      const payload = await body(req);
-      const result = await testSkill(skill, payload.input || "");
-      await saveSkill(skill.id, { last_test: { input: payload.input, output: result, tested_at: new Date().toISOString() } });
-      return send(res, 200, result);
-    }
-
-    const planMatch = url.pathname.match(/^\/api\/plans\/([^/]+)$/);
-    if (req.method === "GET" && planMatch) return send(res, 200, await getPlan(planMatch[1]));
-    if (req.method === "PUT" && planMatch) return send(res, 200, await savePlan(planMatch[1], await body(req)));
-
-    const toolDuplicate = url.pathname.match(/^\/api\/tools\/([^/]+)\/duplicate$/);
-    const toolTestMatch = url.pathname.match(/^\/api\/tools\/([^/]+)\/test$/);
-    const toolMatch = url.pathname.match(/^\/api\/tools\/([^/]+)$/);
-    if (req.method === "POST" && toolDuplicate) return send(res, 201, await duplicateTool(toolDuplicate[1]));
-    if (req.method === "POST" && toolTestMatch) {
-      const tool = await getTool(toolTestMatch[1], false);
-      if (!tool.enabled) throw new Error(`Tool 已禁用：${tool.name}`);
-      const payload = await body(req);
-      return send(res, 200, await runToolTest(tool, payload.input && typeof payload.input === "object" ? payload.input : {}));
-    }
-    if (req.method === "PUT" && toolMatch) return send(res, 200, await saveTool(toolMatch[1], await body(req)));
-    if (req.method === "DELETE" && toolMatch) {
-      const plans = await listPlans();
-      const nextPlans = plans.map((plan) => {
-        const removed = new Set(plan.nodes.filter((node) => node.capability_id === toolMatch[1]).map((node) => node.id));
-        return removed.size ? { ...plan, nodes: plan.nodes.filter((node) => !removed.has(node.id)).map((node) => ({ ...node, depends_on: node.depends_on.filter((dep) => !removed.has(dep)) })) } : plan;
-      });
-      if (JSON.stringify(nextPlans) !== JSON.stringify(plans)) await writeJson("plans.json", nextPlans);
-      return send(res, 200, await deleteTool(toolMatch[1]));
-    }
-
-    const testRerun = url.pathname.match(/^\/api\/tool-tests\/([^/]+)\/rerun$/);
-    if (req.method === "POST" && testRerun) {
-      const previous = (await readJson("tool_test_logs.json")).find((item) => item.id === testRerun[1]);
-      if (!previous) throw new Error("Tool 测试记录不存在");
-      return send(res, 200, await runToolTest(await getTool(previous.tool_id, false), previous.input, previous.id));
     }
 
     const resumeMatch = url.pathname.match(/^\/api\/coze-sessions\/([^/]+)\/resume$/);
@@ -668,6 +527,4 @@ const server = http.createServer(async (req, res) => {
     if (/^\/api\/(skills|tools|planner|llm-config)(?:\/|$)/.test(url.pathname)) return send(res, error.status || 400, { ok: false, error: payload });
     return send(res, error.status || 400, { error: error.message, code: payload.code, details: payload.details, run_id: payload.run_id, test_id: payload.test_id });
   }
-});
-
-server.listen(port, "127.0.0.1", () => console.log(`PeopleFlow API: http://localhost:${port}/api`));
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { apiRequest } from "./admin/api";
 
 type KeywordRule = { all: string[]; any: string[]; groups: string[][] };
 type EvidenceRule = { required: boolean; categories: string[]; sourceIds: string[]; minCount: number };
@@ -160,7 +161,6 @@ type CaseDraft = {
   isBadCase: boolean;
 };
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8787/api";
 const emptyDraft: CaseDraft = { name: "", question: "", employeeId: "E001", category: "unknown", difficulty: "medium", inputRiskLevel: "low", expectedBehavior: "", expectedReply: "", requiredCapabilities: "reply_generation, risk_review", forbiddenCapabilities: "", keywordAll: "", keywordAny: "", forbiddenWords: "", expectedFacts: "{}", forbiddenFacts: "{}", evidenceCategories: "", evidenceSourceIds: "", evalDimensions: "intentAccuracy, answerRelevance, factualAccuracy, capabilityRouting, evidenceGrounding, riskSafety", tags: "", evidenceRequired: true, expectHandoff: false, llmJudgeEnabled: false, enabled: true, isBadCase: false };
 const categoryNames: Record<string, string> = { materials: "入职材料", tasks: "入职任务", policy: "制度政策", sensitive: "敏感信息", contact: "联系人", training: "培训学习", coze: "Coze 工作流", unknown: "知识边界", system: "系统与权限", context: "多轮上下文", "答非所问": "答非所问", "敏感信息": "敏感信息" };
 const dimensionNames: Record<string, string> = { intentAccuracy: "意图准确", answerRelevance: "回答相关", factualAccuracy: "事实准确", capabilityRouting: "能力路由", evidenceGrounding: "知识依据", riskSafety: "风险安全", responseCompleteness: "回答完整" };
@@ -169,7 +169,6 @@ const failureCategoryNames: Record<string, string> = { capability: "能力编排
 function csv(value: string) { return value.split(/[,，\n]/).map((item) => item.trim()).filter(Boolean); }
 function statusClass(status?: string) { return status === "PASS" ? "green" : status === "FAIL" || status === "ERROR" ? "red" : status === "REVIEW" ? "orange" : "neutral"; }
 function riskLabel(risk?: string) { return risk === "critical" ? "严重" : risk === "high" ? "高风险" : risk === "medium" ? "中风险" : "低风险"; }
-function unwrap<T>(payload: T | { ok: boolean; data: T }): T { return typeof payload === "object" && payload !== null && "ok" in payload && "data" in payload ? (payload as { data: T }).data : payload as T; }
 
 function failureDetailsFor(run: EvaluationCaseRun): FailureDetail[] {
   if (run.scoreResult.failureDetails?.length) return run.scoreResult.failureDetails;
@@ -194,15 +193,7 @@ function failureDetailsFor(run: EvaluationCaseRun): FailureDetail[] {
   return details;
 }
 
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API}${path}`, init);
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = typeof payload.error === "object" ? payload.error : { message: payload.error };
-    throw new Error(error?.message || "评测请求失败");
-  }
-  return unwrap(payload);
-}
+const api = apiRequest;
 
 function toDraft(item: EvaluationCase): CaseDraft {
   return {
@@ -394,7 +385,7 @@ export default function EvaluationCenter({ coreCases, badCases, runs, onReload, 
   return <div className="page evaluation-center eval-v2">
     <div className="page-heading">
       <div><span className="eyebrow">REAL AGENT EVALUATION</span><h1>自动评测中心</h1><p>每条用例真实经过 Planner、Validator、Skill、Tool、知识检索、回复生成与风险审核；ERROR 不计入产品质量 FAIL。</p></div>
-      <div className="heading-actions"><button className="secondary" onClick={importFromRun}>从 Run 加入</button><button className="secondary" onClick={() => openCreate(true)}>＋ Bad Case</button><button className="secondary" onClick={() => openCreate(false)}>＋ 新增用例</button><button className="secondary" disabled={running} onClick={() => runBatch(true)}>快速运行 8 条</button><button className="primary compact" disabled={running || !selectedCases.length} onClick={() => runBatch(false)}>{running ? "真实 Agent 评测中…" : `运行已选 ${selectedCases.length} 条`}</button></div>
+      <div className="heading-actions eval-heading-actions"><details className="eval-more-actions"><summary>更多操作</summary><div><button onClick={importFromRun}>从 Run 加入</button><button onClick={() => openCreate(true)}>新增 Bad Case</button><button onClick={() => openCreate(false)}>新增用例</button><button disabled={running} onClick={() => runBatch(true)}>快速运行 8 条</button></div></details><button className="primary compact" disabled={running || !selectedCases.length} onClick={() => runBatch(false)}>{running ? "真实 Agent 评测中…" : `运行已选 ${selectedCases.length} 条`}</button></div>
     </div>
 
     {showForm && <section className="panel eval-case-form">
@@ -434,13 +425,11 @@ export default function EvaluationCenter({ coreCases, badCases, runs, onReload, 
       <button className={suite === "all" ? "active" : ""} onClick={() => { setSuite("all"); setPage(1); }}>全部用例 <b>{cases.length}</b></button>
     </div>
 
-    <div className="eval-status-grid">
-      <div className="panel"><span>产品质量通过率</span><b>{latestBatch ? `${Math.round(latestBatch.pass_rate * 100)}%` : "—"}</b><small>PASS / (PASS + FAIL)</small></div>
-      <div className="panel pass"><span>PASS</span><b>{latestBatch?.passed ?? 0}</b><small>确定性评分通过</small></div>
-      <div className="panel fail"><span>FAIL</span><b>{latestBatch?.failed ?? 0}</b><small>产品质量问题</small></div>
-      <div className="panel review"><span>REVIEW</span><b>{latestBatch?.review ?? 0}</b><small>需要人工复核</small></div>
-      <div className="panel error"><span>ERROR</span><b>{latestBatch?.error ?? 0}</b><small>系统错误，不计 FAIL</small></div>
-      <div className="panel"><span>系统可用率</span><b>{latestBatch?.availability_rate != null ? `${Math.round(latestBatch.availability_rate * 100)}%` : "—"}</b><small>{latestBatch?.model || "等待真实运行"}</small></div>
+    <div className="eval-status-grid eval-status-grid-v3">
+      <div className="panel"><span>产品质量通过率</span><b>{latestBatch ? `${Math.round(latestBatch.pass_rate * 100)}%` : "—"}</b><small>PASS {latestBatch?.passed ?? 0} · FAIL {latestBatch?.failed ?? 0}</small></div>
+      <div className="panel"><span>能力路由准确率</span><b>{latestBatch ? `${Math.round((latestBatch.route_accuracy || 0) * 100)}%` : "—"}</b><small>Planner / Skill / Tool 编排</small></div>
+      <div className="panel"><span>风险处理准确率</span><b>{latestBatch ? `${Math.round((latestBatch.risk_accuracy || 0) * 100)}%` : "—"}</b><small>风险识别与安全回复</small></div>
+      <div className="panel"><span>系统可用率</span><b>{latestBatch?.availability_rate != null ? `${Math.round(latestBatch.availability_rate * 100)}%` : "—"}</b><small>REVIEW {latestBatch?.review ?? 0} · ERROR {latestBatch?.error ?? 0}</small></div>
     </div>
 
     <section className="panel evaluation-dataset">

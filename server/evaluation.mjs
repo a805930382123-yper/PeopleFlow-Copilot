@@ -1,4 +1,4 @@
-import { readJsonOr, writeJson } from "./json-store.mjs";
+import { readJsonOr, updateJson } from "./json-store.mjs";
 import { isSensitiveQuestion } from "./question-intent.mjs";
 
 const uid = (prefix) => `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 7).toUpperCase()}`;
@@ -108,16 +108,15 @@ export async function getEvaluationCase(id) {
   return item;
 }
 
-async function saveSuite(isBadCase, rows) {
-  await writeJson(isBadCase ? "bad_case_evaluation_cases.json" : "evaluation_cases.json", rows);
-}
+const suiteFile = (isBadCase) => isBadCase ? "bad_case_evaluation_cases.json" : "evaluation_cases.json";
 
 export async function createEvaluationCase(input) {
   const item = normalizeEvalCase(input);
-  const rows = await listEvaluationCases({ suite: item.isBadCase ? "bad_case" : "core" });
-  if (rows.some((row) => row.id === item.id)) throw Object.assign(new Error("评测用例 ID 已存在"), { code: "EVAL_CASE_ID_EXISTS" });
-  rows.unshift(item);
-  await saveSuite(item.isBadCase, rows.slice(0, 1000));
+  await updateJson(suiteFile(item.isBadCase), (rows) => {
+    if (rows.some((row) => row.id === item.id)) throw Object.assign(new Error("评测用例 ID 已存在"), { code: "EVAL_CASE_ID_EXISTS" });
+    rows.unshift(item);
+    return rows.slice(0, 1000);
+  }, []);
   return item;
 }
 
@@ -131,24 +130,25 @@ export async function createBadCase(input) {
 export async function updateEvaluationCase(id, patch) {
   const current = await getEvaluationCase(id);
   const next = normalizeEvalCase({ ...current, ...patch, id, createdAt: current.createdAt, updatedAt: now() });
-  const oldRows = await listEvaluationCases({ suite: current.isBadCase ? "bad_case" : "core" });
-  const nextRows = oldRows.filter((row) => row.id !== id);
   if (current.isBadCase !== next.isBadCase) {
-    await saveSuite(current.isBadCase, nextRows);
-    const targetRows = await listEvaluationCases({ suite: next.isBadCase ? "bad_case" : "core" });
-    targetRows.unshift(next);
-    await saveSuite(next.isBadCase, targetRows);
+    await updateJson(suiteFile(current.isBadCase), (rows) => rows.filter((row) => row.id !== id), []);
+    await updateJson(suiteFile(next.isBadCase), (rows) => {
+      rows.unshift(next);
+      return rows.slice(0, 1000);
+    }, []);
   } else {
-    nextRows.splice(oldRows.findIndex((row) => row.id === id), 0, next);
-    await saveSuite(next.isBadCase, nextRows);
+    await updateJson(suiteFile(next.isBadCase), (rows) => {
+      const index = rows.findIndex((row) => row.id === id);
+      if (index < 0) throw Object.assign(new Error(`评测用例 ${id} 不存在`), { code: "EVAL_CASE_NOT_FOUND" });
+      rows[index] = next;
+    }, []);
   }
   return next;
 }
 
 export async function deleteEvaluationCase(id) {
   const current = await getEvaluationCase(id);
-  const rows = await listEvaluationCases({ suite: current.isBadCase ? "bad_case" : "core" });
-  await saveSuite(current.isBadCase, rows.filter((row) => row.id !== id));
+  await updateJson(suiteFile(current.isBadCase), (rows) => rows.filter((row) => row.id !== id), []);
   return { id, deleted: true };
 }
 
@@ -337,9 +337,10 @@ export function scoreEvaluationCase(caseInput, execution, options = {}) {
 }
 
 async function saveCaseRun(run) {
-  const rows = await readJsonOr("evaluation_case_runs.json", []);
-  rows.unshift(run);
-  await writeJson("evaluation_case_runs.json", rows.slice(0, 2000));
+  await updateJson("evaluation_case_runs.json", (rows) => {
+    rows.unshift(run);
+    return rows.slice(0, 2000);
+  }, []);
 }
 
 export async function runEvaluationCase(caseOrId, agentRunner, options = {}) {
@@ -440,9 +441,10 @@ export async function runEvaluation(options = {}, dependencies = {}) {
     results: results.map(toLegacyResult),
     eval_runs: results,
   };
-  const batches = await readJsonOr("evaluation_runs.json", []);
-  batches.unshift(batch);
-  await writeJson("evaluation_runs.json", batches.slice(0, 100));
+  await updateJson("evaluation_runs.json", (batches) => {
+    batches.unshift(batch);
+    return batches.slice(0, 100);
+  }, []);
   return batch;
 }
 

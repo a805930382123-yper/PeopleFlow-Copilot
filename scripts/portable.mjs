@@ -25,7 +25,7 @@ async function isPeopleFlowApiOnline() {
 
 if (!(await isPeopleFlowApiOnline())) {
   const bundledApi = path.join(root, "server", "server-runtime.mjs");
-  await import(existsSync(bundledApi) ? pathToFileURL(bundledApi).href : "../server/index.mjs");
+  await import(existsSync(bundledApi) ? pathToFileURL(bundledApi).href : "../server/local-server.mjs");
 }
 
 async function assetResponse(request) {

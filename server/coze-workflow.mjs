@@ -1,4 +1,5 @@
 import dns from "node:dns";
+import { getRuntimeEnv } from "./runtime-env.mjs";
 
 const DEFAULT_WORKFLOW_ID = "7659350798523416603";
 const DEFAULT_BASE_URL = "https://api.coze.cn";
@@ -79,7 +80,7 @@ export function selectFinalMessageOutput(messages, configuredTitles = DEFAULT_AN
 }
 
 const configuredTimeout = (override) => {
-  const value = Number(override || process.env.COZE_TIMEOUT_MS || DEFAULT_TIMEOUT_MS);
+  const value = Number(override || getRuntimeEnv("COZE_TIMEOUT_MS") || DEFAULT_TIMEOUT_MS);
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_TIMEOUT_MS;
 };
 
@@ -166,9 +167,9 @@ async function readRunHistory(baseUrl, workflowId, executeId, headers, signal) {
 }
 
 function credentials(config = {}) {
-  const token = process.env[config.auth_env_var || "COZE_API_TOKEN"]?.trim();
-  const baseUrl = (config.base_url || process.env.COZE_API_BASE_URL || DEFAULT_BASE_URL).replace(/\/+$/, "");
-  const workflowId = String(config.workflow_id || process.env.COZE_WORKFLOW_ID || DEFAULT_WORKFLOW_ID);
+  const token = getRuntimeEnv(config.auth_env_var || "COZE_API_TOKEN")?.trim();
+  const baseUrl = (config.base_url || getRuntimeEnv("COZE_API_BASE_URL") || DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const workflowId = String(config.workflow_id || getRuntimeEnv("COZE_WORKFLOW_ID") || DEFAULT_WORKFLOW_ID);
   return { token, baseUrl, workflowId, headers: token ? { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } : {} };
 }
 
@@ -217,7 +218,7 @@ async function runStream(endpoint, body, config = {}) {
   const started = Date.now();
   const { token, baseUrl, workflowId, headers } = credentials(config);
   if (!token) {
-    if ((process.env.COZE_MOCK_MODE || "true").toLowerCase() !== "true") throw new Error(`未配置 ${config.auth_env_var || "COZE_API_TOKEN"}`);
+    if ((getRuntimeEnv("COZE_MOCK_MODE") || "true").toLowerCase() !== "true") throw new Error(`未配置 ${config.auth_env_var || "COZE_API_TOKEN"}`);
     return { output: { answer: "这是 Coze 工作流 Tool 的模拟结果。", status: "success", risk_level: "unknown" }, trace: [{ index: 0, event: "Done", node_title: "Mock End", content: "模拟结果", timestamp: new Date().toISOString() }], interrupt: null, mock: true, duration_ms: Date.now() - started };
   }
   const controller = new AbortController();

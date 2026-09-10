@@ -1,3 +1,5 @@
+import { getRuntimeEnv } from "./runtime-env.mjs";
+
 const LOCAL_DIMENSIONS = 192;
 
 function normalizeVector(vector) {
@@ -42,11 +44,11 @@ function endpoint(base, path) {
 }
 
 export function getEmbeddingRuntimeConfig() {
-  const provider = String(process.env.EMBEDDING_PROVIDER || "local-hash").toLowerCase();
+  const provider = String(getRuntimeEnv("EMBEDDING_PROVIDER") || "local-hash").toLowerCase();
   if (provider === "local-hash") return { provider, model: "local-chinese-ngram-v1", dimensions: LOCAL_DIMENSIONS, configured: true, semantic: false, label: "本地字符向量" };
-  const model = String(process.env.EMBEDDING_MODEL || "").trim();
-  const apiKey = String(process.env.EMBEDDING_API_KEY || "").trim();
-  return { provider: "openai-compatible", model, dimensions: null, configured: Boolean(model && apiKey), semantic: true, label: "OpenAI-Compatible Embedding", endpoint: endpoint(process.env.EMBEDDING_BASE_URL || process.env.LLM_BASE_URL, process.env.EMBEDDING_API_PATH) };
+  const model = String(getRuntimeEnv("EMBEDDING_MODEL") || "").trim();
+  const apiKey = String(getRuntimeEnv("EMBEDDING_API_KEY") || "").trim();
+  return { provider: "openai-compatible", model, dimensions: null, configured: Boolean(model && apiKey), semantic: true, label: "OpenAI-Compatible Embedding", endpoint: endpoint(getRuntimeEnv("EMBEDDING_BASE_URL") || getRuntimeEnv("LLM_BASE_URL"), getRuntimeEnv("EMBEDDING_API_PATH")) };
 }
 
 export async function embedTexts(texts, options = {}) {
@@ -59,9 +61,9 @@ export async function embedTexts(texts, options = {}) {
   }
   const response = await fetch(runtime.endpoint, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.EMBEDDING_API_KEY}` },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${getRuntimeEnv("EMBEDDING_API_KEY")}` },
     body: JSON.stringify({ model: runtime.model, input: texts }),
-    signal: AbortSignal.timeout(Number(process.env.EMBEDDING_TIMEOUT_MS || 60000)),
+    signal: AbortSignal.timeout(Number(getRuntimeEnv("EMBEDDING_TIMEOUT_MS") || 60000)),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {

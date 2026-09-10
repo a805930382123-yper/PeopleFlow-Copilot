@@ -10,6 +10,7 @@ import SkillsPage from "./skills/page";
 import ToolsPage from "./tools/page";
 import PlannerPage from "./planner/page";
 import ModelsPage from "./models/page";
+import { apiRequest, type ApiRequestInit } from "./admin/api";
 
 type Employee = { id: string; name: string; department: string; position: string; stage: string; manager: string; hr_partner: string };
 type Skill = { id: string; name: string; description: string; prompt: string; enabled: boolean; model: string; effective_model?: string; model_source?: "global" | "skill" | "fixture" | "unconfigured"; version?: string; source_document?: string; temperature: number; max_tokens: number; last_test?: { tested_at: string } };
@@ -26,9 +27,15 @@ type LlmRuntime = { configured: boolean; provider: string; mode?: string; model:
 type LlmTestResult = Partial<LlmRuntime> & { ok: boolean; error?: string | { code?: string; message?: string }; duration_ms?: number; attempts?: number; output?: unknown };
 type Conversation = ConversationRecord;
 type Handoff = { id: string; question: string; summary: string; reason: string; risk_level: string; assigned_to: string; status: string; created_at: string };
-type Bootstrap = { employees: Employee[]; skills: Skill[]; tools: Tool[]; plans: Plan[]; logs: Execution[]; tool_tests: ToolTest[]; coze_sessions: CozeSession[]; conversations: Conversation[]; conversation_feedback: ConversationFeedback[]; handoffs: Handoff[]; knowledge_documents: KnowledgeDocument[]; knowledge_stats: { total: number; active: number; review: number; failed: number; indexed: number; chunks: number; categories: number; characters: number }; knowledge_import_jobs: KnowledgeImportJob[]; knowledge_runtime: KnowledgeRuntime; security_events: { id: string; category: string; action: string; risk_level: string; created_at: string }[]; evaluation_cases: EvaluationCase[]; bad_case_evaluation_cases: EvaluationCase[]; evaluation_runs: EvaluationRun[]; access_policies: { id: string; description: string }[]; analytics: AnalyticsData; llm: LlmRuntime };
+type BootstrapIssue = { source: string; code: string; message: string };
+type Bootstrap = { bootstrap_status?: "ok" | "partial"; bootstrap_errors?: BootstrapIssue[]; employees: Employee[]; skills: Skill[]; tools: Tool[]; plans: Plan[]; logs: Execution[]; tool_tests: ToolTest[]; coze_sessions: CozeSession[]; conversations: Conversation[]; conversation_feedback: ConversationFeedback[]; handoffs: Handoff[]; knowledge_documents: KnowledgeDocument[]; knowledge_stats: { total: number; active: number; review: number; failed: number; indexed: number; chunks: number; categories: number; characters: number }; knowledge_import_jobs: KnowledgeImportJob[]; knowledge_runtime: KnowledgeRuntime; security_events: { id: string; category: string; action: string; risk_level: string; created_at: string }[]; evaluation_cases: EvaluationCase[]; bad_case_evaluation_cases: EvaluationCase[]; evaluation_runs: EvaluationRun[]; access_policies: { id: string; description: string }[]; analytics: AnalyticsData | null; llm: LlmRuntime };
 
-const API = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8787/api";
+function request(path: "/execute" | `/runs/${string}/retry`, options?: ApiRequestInit): Promise<Execution>;
+function request(path: "/llm/test", options?: ApiRequestInit): Promise<LlmTestResult>;
+function request<T = unknown>(path: string, options?: ApiRequestInit): Promise<T>;
+function request<T = unknown>(path: string, options?: ApiRequestInit) {
+  return apiRequest<T>(path, options);
+}
 const legacyViewAliases: Record<string, string> = { plans: "planner-admin", skills: "skills-admin", tools: "tools-admin", tests: "tools-admin", config: "config-admin" };
 const conditions = ["always", "materials", "task", "policy", "training", "contact", "coze", "process"];
 const conditionNames: Record<string, string> = { always: "始终", materials: "入职材料", task: "入职任务", policy: "制度问题", training: "培训问题", contact: "联系人问题", coze: "Coze 工作流", process: "办理流程" };
@@ -46,7 +53,9 @@ export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [view, setView] = useState("agent");
   const [toast, setToast] = useState("");
-  const [employeeId, setEmployeeId] = useState("E001");
+  const [employeeId, setEmployeeId] = useState("");
+  const [loadingData, setLoadingData] = useState(true);
+  const [bootstrapMessage, setBootstrapMessage] = useState("");
   const [question, setQuestion] = useState(examples[0]);
   const [running, setRunning] = useState(false);
   const [execution, setExecution] = useState<Execution | null>(null);
@@ -71,28 +80,34 @@ export default function Home() {
   const [llmTestResult, setLlmTestResult] = useState<LlmTestResult | null>(null);
   const [llmTesting, setLlmTesting] = useState(false);
   const [conversationId, setConversationId] = useState("");
+  const [menuOpen, setMenuOpen] = useState(false);
   const importRef = useRef<HTMLInputElement>(null);
+  const executionRef = useRef<HTMLElement>(null);
 
   const notify = (message: string) => { setToast(message); window.setTimeout(() => setToast(""), 2600); };
   const navigateView = (next: string) => {
     const normalized = legacyViewAliases[next] || next;
     setView(normalized);
+    setMenuOpen(false);
     window.history.replaceState(null, "", normalized === "agent" ? "/" : `/?view=${encodeURIComponent(normalized)}`);
   };
-  const request = async (path: string, options?: RequestInit) => {
-    const response = await fetch(`${API}${path}`, options);
-    const result = await response.json();
-    if (!response.ok) throw new Error(typeof result.error === "object" ? result.error?.message || "请求失败" : result.error || "请求失败");
-    return result?.ok === true && Object.hasOwn(result, "data") ? result.data : result;
-  };
   const load = async () => {
+    setLoadingData(true);
     try {
-      const next = await request("/bootstrap");
+      const next = await request("/bootstrap") as Bootstrap;
       setData(next);
+      const employees = Array.isArray(next.employees) ? next.employees : [];
+      setEmployeeId((current) => employees.some((item) => item.id === current) ? current : employees[0]?.id || "");
       setConversationId((current) => current || next.conversations?.find((item: Conversation) => item.employee_id === employeeId)?.id || "");
       setExecution((current) => current || next.logs?.[0] || null);
       setPlanDraft(next.plans?.[0] ? structuredClone(next.plans[0]) : null);
-    } catch { notify("后端未连接，请运行 npm run dev"); }
+      const issues = next.bootstrap_errors || [];
+      setBootstrapMessage(issues.length ? `部分数据加载失败：${issues.map((item) => item.source).join("、")}` : "");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "平台初始化失败";
+      setBootstrapMessage(message);
+      notify(message);
+    } finally { setLoadingData(false); }
   };
   // Initial server synchronization is an external-system effect.
   // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
@@ -112,10 +127,11 @@ export default function Home() {
   const pageTitle: Record<string, string> = { agent: "Agent 执行", conversations: "会话中心", knowledge: "知识库管理", "planner-admin": "Plan 编排", "skills-admin": "Skill 管理", "tools-admin": "Tool 管理", evaluations: "评测中心", analytics: "运营看板", handoffs: "人工转接", "tool-edit": creatingTool ? "新增 Tool" : "编辑 Tool", "tool-test": "测试 Tool", logs: "执行日志", "config-admin": "配置中心", "skill-edit": "编辑 Skill" };
 
   const execute = async (payload?: { employee_id: string; question: string; plan_id?: string }) => {
+    if (!payload && !employee) { notify("员工数据尚未加载完成，请先重新加载"); return; }
     setRunning(true); setOpenStep(null);
     try {
       const result = await request("/execute", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload || { employee_id: employeeId, actor_employee_id: employeeId, question, plan_id: planDraft?.id, conversation_id: conversationId || undefined }) });
-      setExecution(result); if (result.conversation_id) setConversationId(result.conversation_id); await load(); notify("执行完成");
+      setExecution(result); if (result.conversation_id) setConversationId(result.conversation_id); window.setTimeout(() => executionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 80); await load(); notify("执行完成");
     } catch (error) { notify(error instanceof Error ? error.message : "执行失败"); }
     finally { setRunning(false); }
   };
@@ -184,18 +200,26 @@ export default function Home() {
     finally { setLlmTesting(false); }
   };
 
-  const nav = [["agent", "◎", "Agent 执行"], ["conversations", "◌", "会话中心"], ["knowledge", "▤", "知识库管理"], ["planner-admin", "⌘", "Plan 编排"], ["skills-admin", "◇", "Skill 管理"], ["tools-admin", "▣", "Tool 管理"], ["evaluations", "✓", "评测中心"], ["analytics", "▥", "运营看板"], ["handoffs", "↗", "人工转接"], ["logs", "≡", "执行日志"], ["config-admin", "⚙", "配置中心"]];
+  const navGroups = [
+    { label: "工作区", items: [["agent", "◎", "Agent 执行"], ["conversations", "◌", "会话中心"], ["handoffs", "↗", "人工转接"]] },
+    { label: "能力中心", items: [["planner-admin", "⌘", "Plan 编排"], ["skills-admin", "◇", "Skill 管理"], ["tools-admin", "▣", "Tool 管理"], ["knowledge", "▤", "知识库管理"]] },
+    { label: "质量与运营", items: [["evaluations", "✓", "评测中心"], ["logs", "≡", "执行日志"], ["analytics", "▥", "运营看板"]] },
+    { label: "系统", items: [["config-admin", "⚙", "配置中心"]] },
+  ];
   const activeNav = view;
   const selectedPlanNode = planDraft?.nodes.find((node) => node.id === selectedNode) || null;
 
   return <main className="app-shell">
-    <aside className="sidebar">
+    <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
       <div className="brand"><span className="brand-mark">P</span><div><strong>PeopleFlow</strong><small>可配置执行平台</small></div></div>
-      <nav>{nav.map(([id, icon, label]) => <button key={id} className={activeNav === id ? "active" : ""} onClick={() => navigateView(id)}><span>{icon}</span>{label}</button>)}<Link className="demo-nav-link" href="/demo"><span>聊</span>对话 Demo</Link></nav>
+      <nav>{navGroups.map((group) => <div className="nav-group" key={group.label}><small>{group.label}</small>{group.items.map(([id, icon, label]) => <button key={id} className={activeNav === id ? "active" : ""} onClick={() => navigateView(id)}><span>{icon}</span>{label}</button>)}</div>)}<Link className="demo-nav-link" href="/demo"><span>聊</span><div><strong>员工端预览</strong><small>查看真实对话体验</small></div></Link></nav>
       <div className="sidebar-foot"><span className="status-dot"/><div><strong>本地运行中</strong><small>RAG 知识库 · v1.6.0</small></div></div>
     </aside>
+    {menuOpen && <button className="sidebar-scrim" aria-label="关闭导航" onClick={() => setMenuOpen(false)}/>}
     <section className="workspace">
-      <header className="topbar"><div><span className="crumb">企业入职助手</span><span className="slash">/</span><strong>{pageTitle[view] || "管理平台"}</strong></div><div className="top-actions"><Badge tone="green">系统正常</Badge><span className="avatar">管</span></div></header>
+      <header className="topbar"><div className="topbar-title"><button className="menu-toggle" aria-label="打开导航" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><span className="crumb">企业入职助手</span><span className="slash">/</span><strong>{pageTitle[view] || "管理平台"}</strong></div><div className="top-actions"><Badge tone={bootstrapMessage ? "orange" : "green"}>{bootstrapMessage ? "部分数据异常" : loadingData ? "正在同步" : "系统正常"}</Badge><span className="avatar">管</span></div></header>
+
+      {bootstrapMessage && <section className="bootstrap-alert" role="alert"><div><strong>平台数据未完全加载</strong><span>{bootstrapMessage}。已成功加载的模块仍可使用。</span>{Boolean(data?.bootstrap_errors?.length) && <small>{data?.bootstrap_errors?.map((item) => `${item.source}: ${item.message}`).join("；")}</small>}</div><button className="secondary" onClick={() => void load()} disabled={loadingData}>{loadingData ? "正在重试" : "重新加载"}</button></section>}
 
       {view === "planner-admin" && <PlannerPage embedded/>}
       {view === "skills-admin" && <SkillsPage embedded/>}
@@ -205,12 +229,12 @@ export default function Home() {
       {view === "agent" && <div className="page">
         <div className="page-heading"><div><h1>Agent 执行</h1><p>按当前可配置 Plan 编排 Skill 与 Tool，并保留完整执行轨迹。</p></div><Badge tone="purple">{planDraft?.name || "默认 Plan"}</Badge></div>
         <div className="agent-grid">
-          <section className="panel composer"><div className="conversation-bar"><label>当前会话<select value={conversationId} onChange={(event) => setConversationId(event.target.value)}><option value="">＋ 新建对话</option>{data?.conversations.filter((item) => item.employee_id === employeeId).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.messages.length} 条消息</option>)}</select></label><button className="secondary" onClick={() => { setConversationId(""); setExecution(null); notify("已切换到新对话"); }}>新对话</button></div><label>员工</label><select value={employeeId} onChange={(event) => { setEmployeeId(event.target.value); setConversationId(""); }}>{data?.employees.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.department} · {item.position}</option>)}</select>{employee && <div className="profile-card"><span className="profile-avatar">{employee.name.slice(0, 1)}</span><div><strong>{employee.name}</strong><span>{employee.id} · {employee.stage}</span></div><div className="profile-meta"><span>直属领导<b>{employee.manager}</b></span><span>HR 对接人<b>{employee.hr_partner}</b></span></div></div>}<label>员工问题</label><textarea value={question} onChange={(event) => setQuestion(event.target.value)}/><div className="chips">{examples.map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div><button className="primary" disabled={running} onClick={() => execute()}>{running ? <><span className="spinner"/>正在执行</> : "生成 Plan 并执行"}</button></section>
-          <section className="panel capabilities"><h3>当前能力</h3><p className="muted">Plan 将从已启用能力中按条件选择</p><div className="metric-grid"><div><b>{data?.skills.filter((item) => item.enabled).length || 0}</b><span>Skills</span></div><div><b>{data?.tools.filter((item) => item.enabled).length || 0}</b><span>Tools</span></div><div><b>{planDraft?.nodes.length || 0}</b><span>Plan 节点</span></div><div><b>{data?.coze_sessions.filter((item) => item.status === "waiting_input").length || 0}</b><span>待续跑</span></div></div></section>
+          <section className="panel composer"><div className="conversation-bar"><label>当前会话<select value={conversationId} onChange={(event) => setConversationId(event.target.value)}><option value="">＋ 新建对话</option>{data?.conversations.filter((item) => item.employee_id === employeeId).map((item) => <option key={item.id} value={item.id}>{item.name} · {item.messages.length} 条消息</option>)}</select></label><button className="secondary" onClick={() => { setConversationId(""); setExecution(null); notify("已切换到新对话"); }}>新对话</button></div><label>员工</label><select value={employeeId} disabled={loadingData || !data?.employees.length} onChange={(event) => { setEmployeeId(event.target.value); setConversationId(""); }}><option value="" disabled>{loadingData ? "正在加载员工数据…" : "暂无可用员工，请重新加载"}</option>{data?.employees.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.department} · {item.position}</option>)}</select>{employee && <div className="profile-card"><span className="profile-avatar">{employee.name.slice(0, 1)}</span><div><strong>{employee.name}</strong><span>{employee.id} · {employee.stage}</span></div><div className="profile-meta"><span>直属领导<b>{employee.manager}</b></span><span>HR 对接人<b>{employee.hr_partner}</b></span></div></div>}<label>员工问题</label><textarea value={question} onChange={(event) => setQuestion(event.target.value)}/><div className="chips">{examples.map((item) => <button key={item} onClick={() => setQuestion(item)}>{item}</button>)}</div><button className="primary" disabled={running || !employee} onClick={() => execute()}>{running ? <><span className="spinner"/>正在执行</> : loadingData ? "正在加载员工数据" : "生成 Plan 并执行"}</button></section>
+          <section className="panel capabilities capability-strip"><div><span className="eyebrow">RUNTIME STATUS</span><h3>当前能力</h3><p className="muted">Planner 只会从已启用能力中选择</p></div>{loadingData ? <div className="capability-skeleton" aria-label="正在加载能力配置"><i/><i/><i/><i/></div> : <div className="capability-status"><span><b>{data?.skills.filter((item) => item.enabled).length}</b> Skills</span><span><b>{data?.tools.filter((item) => item.enabled).length}</b> Tools</span><span><b>{planDraft?.nodes.length}</b> Plan 节点</span><span className={(data?.coze_sessions.filter((item) => item.status === "waiting_input").length || 0) > 0 ? "attention" : ""}><b>{data?.coze_sessions.filter((item) => item.status === "waiting_input").length}</b> 待续跑</span></div>}</section>
         </div>
-        {execution && <section className="execution-section">
+        {execution && <section className="execution-section" ref={executionRef}>
           <div className="result-head"><div><span className="eyebrow">EXECUTION TRACE</span><h2>执行结果</h2></div><div className="run-meta"><code>{execution.id}</code><Badge tone={execution.status === "success" ? "green" : execution.status === "blocked" || execution.status === "error" ? "red" : "blue"}>{execution.status || "历史记录"}</Badge><Badge tone="purple">{execution.provider || execution.mode}</Badge><Badge>{execution.model || "未记录模型"}</Badge><Badge tone={execution.risk_review?.risk_level === "critical" || execution.risk_review?.risk_level === "high" ? "red" : execution.risk_review?.risk_level === "medium" ? "orange" : "green"}>{execution.risk_review?.risk_level || "unknown"}</Badge></div></div>
-          {execution.plan && <div className="panel plan-card"><div className="route-decision"><div><span className="eyebrow">AGENT ROUTE</span><strong>{execution.plan.route_decision?.label || "通用执行链路"}</strong><small>{execution.plan.route_decision?.reason || "根据问题语义和节点条件选择能力"}</small></div><Badge tone="purple">置信度 {Math.round((execution.plan.route_decision?.confidence || .8) * 100)}%</Badge></div><p>{execution.plan.rationale}</p><div className="plan-flow">{execution.plan.steps.map((step) => <span key={step.id}>{step.id} · {step.name}</span>)}</div>{execution.plan_validation && <div className={`validator-summary ${execution.plan_validation.valid ? "valid" : "invalid"}`}><strong>{execution.plan_validation.valid ? "Plan Validator 已通过" : "Plan Validator 已阻断"}</strong>{execution.plan_validation.errors?.map((item) => <span key={`${item.code}-${item.message}`}>{item.code} · {item.message}</span>)}</div>}</div>}
+          {execution.plan && <div className="panel plan-card"><div className="route-decision"><div><span className="eyebrow">AGENT ROUTE</span><strong>{execution.plan.route_decision?.label || "通用执行链路"}</strong><small>{execution.plan.route_decision?.reason || "根据问题语义和节点条件选择能力"}</small></div><Badge tone="purple">置信度 {Math.round((execution.plan.route_decision?.confidence || .8) * 100)}%</Badge></div><p>{execution.plan.rationale}</p><div className="agent-pipeline" aria-label="Agent 执行链路"><span>问题识别</span><i>→</i><span>员工与权限</span><i>→</i><span>知识 / 业务查询</span><i>→</i><span>回复生成</span><i>→</i><span>风险审核</span></div><details className="plan-details"><summary>查看本次实际选用的 {execution.plan.steps.length} 个能力</summary><div className="plan-flow">{execution.plan.steps.map((step) => <span key={step.id}>{step.id} · {step.name}</span>)}</div></details>{execution.plan_validation && <div className={`validator-summary ${execution.plan_validation.valid ? "valid" : "invalid"}`}><strong>{execution.plan_validation.valid ? "Plan Validator 已通过" : "Plan Validator 已阻断"}</strong>{execution.plan_validation.errors?.map((item) => <span key={`${item.code}-${item.message}`}>{item.code} · {item.message}</span>)}</div>}</div>}
           <div className="trace-layout"><div className="trace-list">{execution.steps?.map((step, index) => <article className="step-card" key={step.id}><button className="step-summary" onClick={() => setOpenStep(openStep === step.id ? null : step.id)}><span className={`step-index ${step.kind}`}>{index + 1}</span><div><strong>{step.name}</strong><p>{step.goal}</p></div><div className="step-status"><Badge tone={step.status === "success" ? "green" : step.status === "needs_input" ? "orange" : "red"}>{step.status}</Badge><small>{step.duration_ms}ms · {step.attempts || 1} 次</small></div></button>{openStep === step.id && <div className="io-grid"><div><label>INPUT</label><JsonBlock value={step.input}/></div><div><label>OUTPUT / ERROR</label><JsonBlock value={step.error || step.output}/></div></div>}</article>)}</div><div className="final-column"><section className="panel answer-card"><h3>最终回复</h3><div className="answer-text">{execution.final_reply || execution.error?.message || "本次运行没有生成最终回复。"}</div></section>{Boolean(execution.evidence?.length) && <section className="panel evidence-card"><h3>回答依据</h3><div>{execution.evidence?.map((item, index) => <article key={`${item.source}-${item.source_id || index}`}><Badge tone="blue">{item.category}</Badge><strong>{item.title}</strong><small>{item.source}{item.version ? ` · v${item.version}` : ""}{item.effective_date ? ` · ${item.effective_date} 生效` : ""}</small></article>)}</div></section>}<Link className="secondary wide run-detail-link" href={`/runs/${execution.id}`}>查看完整运行详情</Link>{(execution.employee || execution.employee_id) && execution.plan && <button className="secondary wide" onClick={() => execute({ employee_id: execution.employee?.id || execution.employee_id || employeeId, question: execution.question, plan_id: execution.plan?.id })}>重新运行本次执行</button>}</div></div>
         </section>}
       </div>}

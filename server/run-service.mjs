@@ -1,4 +1,4 @@
-import { readJson, writeJson } from "./json-store.mjs";
+import { readJson, updateJson } from "./json-store.mjs";
 import { sanitizeForStorage } from "./privacy.mjs";
 
 export async function getRun(id) {
@@ -38,9 +38,6 @@ export async function listRuns(searchParams = new URLSearchParams()) {
 }
 
 export async function annotateRun(id, input = {}) {
-  const rows = await readJson("execution_logs.json");
-  const run = rows.find((item) => item.id === id);
-  if (!run) throw Object.assign(new Error(`运行记录不存在：${id}`), { status: 404, code: "RUN_NOT_FOUND" });
   const annotation = sanitizeForStorage({
     id: `ANN-${Date.now().toString(36).toUpperCase()}`,
     tags: Array.isArray(input.tags) ? input.tags.map(String).slice(0, 10) : [],
@@ -50,11 +47,14 @@ export async function annotateRun(id, input = {}) {
     author: String(input.author || "本地管理员").slice(0, 80),
     created_at: new Date().toISOString(),
   });
-  run.annotations = [...(run.annotations || []), annotation].slice(-50);
-  run.updated_at = new Date().toISOString();
-  await writeJson("execution_logs.json", rows);
+  let run;
+  await updateJson("execution_logs.json", (rows) => {
+    run = rows.find((item) => item.id === id);
+    if (!run) throw Object.assign(new Error(`运行记录不存在：${id}`), { status: 404, code: "RUN_NOT_FOUND" });
+    run.annotations = [...(run.annotations || []), annotation].slice(-50);
+    run.updated_at = new Date().toISOString();
+  }, []);
   if (annotation.add_to_bad_case) {
-    const badCases = await readJson("bad_case_evaluation_cases.json");
     const badCase = {
       id: `BAD-${Date.now().toString(36).toUpperCase()}`,
       category: annotation.tags[0] || "人工标注",
@@ -65,8 +65,7 @@ export async function annotateRun(id, input = {}) {
       note: annotation.issue,
       created_at: annotation.created_at,
     };
-    badCases.unshift(badCase);
-    await writeJson("bad_case_evaluation_cases.json", badCases.slice(0, 500));
+    await updateJson("bad_case_evaluation_cases.json", (badCases) => [badCase, ...badCases].slice(0, 500), []);
   }
   return { run, annotation };
 }

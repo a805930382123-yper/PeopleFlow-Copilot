@@ -6,6 +6,7 @@ import { readJson } from "./json-store.mjs";
 import { callModel } from "./llm.mjs";
 import { assessSensitiveRequest } from "./privacy.mjs";
 import { mandatoryCapabilitiesFor } from "./plan-validator.mjs";
+import { getRuntimeEnv } from "./runtime-env.mjs";
 
 const basePlannerSkill = {
   model: "gpt-4.1-mini",
@@ -67,7 +68,7 @@ export async function createPlan(question, planId = "default_onboarding_plan", o
   let plannerFallbackReason = null;
   let plannerTokenUsage = null;
   let plannerRuntime = null;
-  const plannerMode = options.forceRules ? "rules" : configured.mode || (process.env.PLANNER_MODE || "hybrid").toLowerCase();
+  const plannerMode = options.forceRules ? "rules" : configured.mode || (getRuntimeEnv("PLANNER_MODE") || "hybrid").toLowerCase();
   if (plannerMode === "hybrid") {
     try {
       const plannerSkill = { ...basePlannerSkill, prompt: configured.planner_prompt || basePlannerSkill.prompt };

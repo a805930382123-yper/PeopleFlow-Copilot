@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:web": "vinext dev",
-    "dev:api": "node server/index.mjs",
+    "dev:api": "node server/local-server.mjs",
     "build": "vinext build",
     "package:windows": "npm run build && node scripts/package-windows.mjs",
     "start": "node scripts/start.mjs",
@@ -18,7 +18,7 @@
     "test:portable": "node tests/portable-smoke.mjs",
     "test:release": "node tests/release-smoke.mjs",
     "test:launcher": "node tests/launcher-smoke.mjs",
-    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
+    "lint": "eslint . --ignore-pattern dist --ignore-pattern .next --ignore-pattern .deploy",
     "typecheck": "tsc --noEmit --incremental false",
     "db:generate": "drizzle-kit generate"
   },

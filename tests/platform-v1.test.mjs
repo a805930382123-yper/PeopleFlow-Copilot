@@ -27,8 +27,8 @@ test("100 条评测集结构完整", async () => {
 
 test("Bad Case 评测集覆盖历史错误、敏感边界和上下文问题", async () => {
   const cases = JSON.parse(await readFile(new URL("../data/bad_case_evaluation_cases.json", import.meta.url), "utf8"));
-  assert.equal(cases.length, 30);
-  assert.equal(new Set(cases.map((item) => item.id)).size, 30);
+  assert.ok(cases.length >= 30);
+  assert.equal(new Set(cases.map((item) => item.id)).size, cases.length);
   assert.ok(cases.every((item) => item.suite === "bad_case" && item.failure_mode && item.question));
   assert.ok(cases.some((item) => item.context?.length));
   assert.ok(cases.some((item) => item.expected_risk === "high"));

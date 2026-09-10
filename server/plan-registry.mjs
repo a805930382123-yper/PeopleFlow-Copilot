@@ -1,5 +1,6 @@
 import { readJson, updateRecord, writeJson } from "./json-store.mjs";
 import { getVersion, listVersions, nextPatchVersion, snapshotVersion, textDiff } from "./versioning.mjs";
+import { getRuntimeEnv } from "./runtime-env.mjs";
 
 const VERSION_FILE = "planner_versions.json";
 export const DEFAULT_PLANNER_PROMPT = "你是企业入职助手的能力编排器。根据员工问题、会话上下文、当前启用的 Skill 和 Tool，选择最小且充分的执行集合。必须保留问题结构化、员工查询、统一知识检索、回复生成和风险审核；根据入职材料、任务、制度、培训、联系人或流程主题选择对应能力。不得选择未启用或不存在的能力。只有用户明确要求 Coze/扣子工作流时才能选择 Coze Tool。输出结构化 JSON，不得编造能力。";
@@ -18,7 +19,7 @@ export async function getPlannerConfig(id = "default_onboarding_plan") {
     ...plan,
     version: plan.version || "1.0.0",
     planner_prompt: plan.planner_prompt || DEFAULT_PLANNER_PROMPT,
-    mode: plan.mode || (process.env.PLANNER_MODE || "hybrid").toLowerCase(),
+    mode: plan.mode || (getRuntimeEnv("PLANNER_MODE") || "hybrid").toLowerCase(),
     mandatory_capabilities: plan.mandatory_capabilities || ["question_structuring", "employee_lookup", "knowledge_lookup", "reply_generation", "risk_review"],
     allowed_skills: plan.allowed_skills || skills.map((item) => item.id),
     allowed_tools: plan.allowed_tools || tools.map((item) => item.id),

@@ -1,7 +1,8 @@
-import { readJson, updateRecord, writeJson } from "./json-store.mjs";
+import { readJson, updateJson, updateRecord } from "./json-store.mjs";
 import { runCozeWorkflowDetailed } from "./coze-workflow.mjs";
 import { getVersion, listVersions, nextPatchVersion, snapshotVersion } from "./versioning.mjs";
 import { searchKnowledgeDocuments } from "./knowledge-rag.mjs";
+import { getRuntimeEnv } from "./runtime-env.mjs";
 
 const stageRank = { pre_onboarding: 0, day_1: 1, week_1: 2, week_2: 3, day_30: 4, day_90: 5 };
 const VERSION_FILE = "tool_versions.json";
@@ -21,8 +22,6 @@ export async function getTool(id, requireEnabled = true) {
 
 export async function createTool(input) {
   validateId(input?.id);
-  const rows = await listTools();
-  if (rows.some((row) => row.id === input.id)) throw new Error(`Tool ID 已存在：${input.id}`);
   const tool = {
     id: input.id,
     name: input.name?.trim() || input.id,
@@ -45,8 +44,10 @@ export async function createTool(input) {
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
-  rows.unshift(tool);
-  await writeJson("tools.json", rows);
+  await updateJson("tools.json", (rows) => {
+    if (rows.some((row) => row.id === input.id)) throw new Error(`Tool ID 已存在：${input.id}`);
+    rows.unshift(tool);
+  });
   return tool;
 }
 
@@ -88,10 +89,11 @@ export async function restoreToolVersion(id, versionId, changeNote) {
 }
 
 export async function deleteTool(id) {
-  const rows = await listTools();
-  const next = rows.filter((row) => row.id !== id);
-  if (next.length === rows.length) throw new Error(`Tool 不存在：${id}`);
-  await writeJson("tools.json", next);
+  await updateJson("tools.json", (rows) => {
+    const next = rows.filter((row) => row.id !== id);
+    if (next.length === rows.length) throw new Error(`Tool 不存在：${id}`);
+    return next;
+  });
   return { id, deleted: true };
 }
 
@@ -122,7 +124,7 @@ async function callHttpTool(tool, input) {
   if (method === "GET") Object.entries(input).forEach(([key, value]) => url.searchParams.set(key, typeof value === "string" ? value : JSON.stringify(value)));
   const headers = { "Content-Type": "application/json", ...(tool.headers || {}) };
   if (tool.auth_env_var) {
-    const secret = process.env[tool.auth_env_var];
+    const secret = getRuntimeEnv(tool.auth_env_var);
     if (!secret) throw new Error(`未配置环境变量：${tool.auth_env_var}`);
     if (!headers.Authorization && !headers.authorization) headers.Authorization = `Bearer ${secret}`;
   }
