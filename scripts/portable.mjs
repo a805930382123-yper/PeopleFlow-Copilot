@@ -39,6 +39,19 @@ async function assetResponse(request) {
 
 const server = http.createServer(async (req, res) => {
   try {
+    // Keep local API storage rooted in the source/runtime server, not the UI bundle.
+    if ((req.url || "").startsWith("/api/")) {
+      const upstream = http.request({ hostname: "127.0.0.1", port: apiPort, path: req.url, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${apiPort}` } }, (response) => {
+        res.writeHead(response.statusCode || 502, response.headers);
+        response.pipe(res);
+      });
+      upstream.on("error", () => {
+        if (!res.headersSent) res.writeHead(502, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ error: "业务服务暂时不可用，请重新启动后重试。" }));
+      });
+      req.pipe(upstream);
+      return;
+    }
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     const request = new Request(`http://${req.headers.host || `localhost:${port}`}${req.url}`, { method: req.method, headers: req.headers, body: ["GET", "HEAD"].includes(req.method || "GET") ? undefined : Buffer.concat(chunks) });

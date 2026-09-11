@@ -13,5 +13,8 @@ try {
   assert.ok(asset);
   assert.equal((await fetch(new URL(asset, "http://127.0.0.1:3091"))).status, 200);
   assert.equal((await fetch("http://127.0.0.1:8891/api/health")).status, 200);
-  console.log("Portable package smoke test passed");
+  const employeeResponse = await fetch("http://127.0.0.1:3091/api/employee-workspace/E001");
+  assert.equal(employeeResponse.status, 200);
+  assert.equal((await employeeResponse.json()).employee.id, "E001");
+  console.log("Portable package smoke test passed, including same-origin employee API");
 } finally { child.kill(); }

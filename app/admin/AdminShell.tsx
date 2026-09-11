@@ -18,7 +18,7 @@ export default function AdminShell({ active, title, description, children, badge
   if (!embedded) return <main className="admin-redirect"><StatePanel state="loading" message="正在返回 PeopleFlow 统一管理平台…"/></main>;
 
   return <section className="admin-embedded">
-    <header className="admin-header"><div><small>企业入职小助手 / 统一管理平台</small><h1>{title}</h1><p>{description}</p></div>{badge}</header>
+    <header className="admin-header"><div><small>PeopleFlow / 高级配置</small><h1>{title}</h1><p>{description}</p></div>{badge}</header>
     {children}
   </section>;
 }

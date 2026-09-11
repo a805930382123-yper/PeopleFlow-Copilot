@@ -13,7 +13,7 @@
     "package:windows": "npm run build && node scripts/package-windows.mjs",
     "start": "node scripts/start.mjs",
     "test": "npm run build && node --test tests/rendered-html.test.mjs",
-    "test:unit": "node --import=./tests/setup-env.mjs --test tests/coze-workflow.test.mjs tests/agent-routing.test.mjs tests/llm.test.mjs tests/skill-config.test.mjs tests/platform-v1.test.mjs tests/productization.test.mjs tests/knowledge-import.test.mjs tests/knowledge-rag.test.mjs tests/plan-validator.test.mjs tests/evaluation-v2.test.mjs tests/token-usage.test.mjs",
+    "test:unit": "node --import=./tests/setup-env.mjs --test tests/coze-workflow.test.mjs tests/agent-routing.test.mjs tests/llm.test.mjs tests/skill-config.test.mjs tests/platform-v1.test.mjs tests/productization.test.mjs tests/knowledge-import.test.mjs tests/knowledge-rag.test.mjs tests/plan-validator.test.mjs tests/evaluation-v2.test.mjs tests/token-usage.test.mjs tests/workspaces.test.mjs",
     "test:api": "node --import=./tests/setup-env.mjs tests/api-smoke.mjs",
     "test:portable": "node tests/portable-smoke.mjs",
     "test:release": "node tests/release-smoke.mjs",

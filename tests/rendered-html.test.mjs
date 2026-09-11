@@ -9,17 +9,20 @@ async function render(pathname = "/") {
   return worker.fetch(new Request(`http://localhost${pathname}`, { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders the PeopleFlow management platform", async () => {
+test("server-renders the employee workspace with three product entry points", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /PeopleFlow/);
-  assert.match(html, /Plan 编排/);
-  assert.match(html, /Tool 管理/);
-  assert.match(html, /会话中心/);
-  assert.match(html, /知识库管理/);
-  assert.match(html, /配置中心/);
+  assert.match(html, /员工端/);
+  assert.match(html, /企业管理端/);
+  assert.match(html, /高级配置/);
+  assert.match(html, /问问助手/);
+  assert.match(html, /我的待办/);
+  assert.match(html, /处理进度/);
+  assert.match(html, /发送问题/);
+  assert.doesNotMatch(html, /EXECUTION TRACE/);
   assert.doesNotMatch(html, /Your site is taking shape|codex-preview/i);
 });
 

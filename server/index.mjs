@@ -1,3 +1,4 @@
+import { handleWorkspaceRoutes } from "./routes/workspaces.mjs";
 import { readJson, updateJson, updateRecord } from "./json-store.mjs";
 import { listSkills } from "./skill-registry.mjs";
 import { listTools, getTool, saveTool, callTool, callToolDetailed } from "./tool-registry.mjs";
@@ -395,6 +396,7 @@ export async function handleNodeApiRequest(req, res) {
   if (req.method === "OPTIONS") return send(res, 204, {});
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
+    if (await handleWorkspaceRoutes(req, res, url, { executeAgent, createHandoffRecord })) return;
     if (await handleSystemRoutes(req, res, url, { bootstrap, dataHealth, demoBootstrap })) return;
     if (await handleManagementRoutes(req, res, url, { managementSkills, managementTools, listSkills, listTools, publicTool, previewPlanner, runToolTest })) return;
     if (await handleKnowledgeRoutes(req, res, url)) return;

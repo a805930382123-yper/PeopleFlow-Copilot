@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { workspaces, workspaceFor, normalizeView } from "./workspaces";
+import EmployeeWorkspace from "./EmployeeWorkspace";
+import EnterpriseWorkspace from "./EnterpriseWorkspace";
+import "./workspaces.css";
 import EvaluationCenter, { type EvaluationCase, type EvaluationRun } from "./EvaluationCenter";
 import KnowledgeCenter, { type KnowledgeDocument, type KnowledgeImportJob, type KnowledgeRuntime } from "./KnowledgeCenter";
 import ConversationCenter, { type ConversationFeedback, type ConversationRecord } from "./ConversationCenter";
@@ -51,7 +55,7 @@ function riskLabel(risk?: string) { return ({ low: "低风险", medium: "中风�
 
 export default function Home() {
   const [data, setData] = useState<Bootstrap | null>(null);
-  const [view, setView] = useState("agent");
+  const [view, setView] = useState("employee-chat");
   const [toast, setToast] = useState("");
   const [employeeId, setEmployeeId] = useState("");
   const [loadingData, setLoadingData] = useState(true);
@@ -89,7 +93,7 @@ export default function Home() {
     const normalized = legacyViewAliases[next] || next;
     setView(normalized);
     setMenuOpen(false);
-    window.history.replaceState(null, "", normalized === "agent" ? "/" : `/?view=${encodeURIComponent(normalized)}`);
+    window.history.pushState(null, "", normalized === "employee-chat" ? "/" : `/?view=${encodeURIComponent(normalized)}`);
   };
   const load = async () => {
     setLoadingData(true);
@@ -114,12 +118,10 @@ export default function Home() {
   useEffect(() => { void load(); }, []);
   // Keep the active workspace view addressable without creating a second admin shell.
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("view");
-    if (requested) {
-      // Query-string navigation is intentionally synchronized after hydration.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setView(legacyViewAliases[requested] || requested);
-    }
+    const sync = () => setView(normalizeView(new URLSearchParams(window.location.search).get("view")));
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
   }, []);
 
   const employee = useMemo(() => data?.employees.find((item) => item.id === employeeId), [data, employeeId]);
@@ -200,24 +202,23 @@ export default function Home() {
     finally { setLlmTesting(false); }
   };
 
-  const navGroups = [
-    { label: "工作区", items: [["agent", "◎", "Agent 执行"], ["conversations", "◌", "会话中心"], ["handoffs", "↗", "人工转接"]] },
-    { label: "能力中心", items: [["planner-admin", "⌘", "Plan 编排"], ["skills-admin", "◇", "Skill 管理"], ["tools-admin", "▣", "Tool 管理"], ["knowledge", "▤", "知识库管理"]] },
-    { label: "质量与运营", items: [["evaluations", "✓", "评测中心"], ["logs", "≡", "执行日志"], ["analytics", "▥", "运营看板"]] },
-    { label: "系统", items: [["config-admin", "⚙", "配置中心"]] },
-  ];
+  const activeWorkspace = workspaceFor(view);
+  const navGroups = [activeWorkspace];
   const activeNav = view;
   const selectedPlanNode = planDraft?.nodes.find((node) => node.id === selectedNode) || null;
 
   return <main className="app-shell">
     <aside className={`sidebar ${menuOpen ? "open" : ""}`}>
-      <div className="brand"><span className="brand-mark">P</span><div><strong>PeopleFlow</strong><small>可配置执行平台</small></div></div>
-      <nav>{navGroups.map((group) => <div className="nav-group" key={group.label}><small>{group.label}</small>{group.items.map(([id, icon, label]) => <button key={id} className={activeNav === id ? "active" : ""} onClick={() => navigateView(id)}><span>{icon}</span>{label}</button>)}</div>)}<Link className="demo-nav-link" href="/demo"><span>聊</span><div><strong>员工端预览</strong><small>查看真实对话体验</small></div></Link></nav>
+      <div className="brand"><span className="brand-mark">P</span><div><strong>PeopleFlow</strong><small>企业员工服务助手</small></div></div>
+      <nav aria-label="工作区功能">{navGroups.map((group) => <div className="nav-group" key={group.label}><small>{group.label}</small>{group.items.map(([id, icon, label]) => <button key={id} aria-current={activeNav === id ? "page" : undefined} className={activeNav === id ? "active" : ""} onClick={() => navigateView(id)}><span aria-hidden="true">{icon}</span>{label}</button>)}</div>)}</nav>
       <div className="sidebar-foot"><span className="status-dot"/><div><strong>本地运行中</strong><small>RAG 知识库 · v1.6.0</small></div></div>
     </aside>
     {menuOpen && <button className="sidebar-scrim" aria-label="关闭导航" onClick={() => setMenuOpen(false)}/>}
     <section className="workspace">
-      <header className="topbar"><div className="topbar-title"><button className="menu-toggle" aria-label="打开导航" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><span className="crumb">企业入职助手</span><span className="slash">/</span><strong>{pageTitle[view] || "管理平台"}</strong></div><div className="top-actions"><Badge tone={bootstrapMessage ? "orange" : "green"}>{bootstrapMessage ? "部分数据异常" : loadingData ? "正在同步" : "系统正常"}</Badge><span className="avatar">管</span></div></header>
+      <header className="topbar"><div className="topbar-title"><button className="menu-toggle" aria-label="打开导航" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}>☰</button><nav className="workspace-switch" aria-label="切换工作区">{workspaces.map((space) => <button key={space.id} aria-current={activeWorkspace.id === space.id ? "page" : undefined} onClick={() => navigateView(space.items[0][0])}>{space.label}</button>)}</nav></div><div className="top-actions"><Badge tone={bootstrapMessage ? "orange" : "green"}>{bootstrapMessage ? "部分数据异常" : loadingData ? "正在同步" : "系统正常"}</Badge></div></header>
+      <div className="workspace-context"><strong>{activeWorkspace.items.find(([id]) => id === view)?.[2] || pageTitle[view]}</strong><span>{activeWorkspace.description}</span></div>
+      {activeWorkspace.id === "employee" && <EmployeeWorkspace view={view} employees={data?.employees || []} employeeId={employeeId} onEmployeeChange={setEmployeeId} navigate={navigateView}/>}
+      {["members", "service-settings", "handoffs"].includes(view) && <EnterpriseWorkspace key={view} view={view} notify={notify} onReload={load}/>}
 
       {bootstrapMessage && <section className="bootstrap-alert" role="alert"><div><strong>平台数据未完全加载</strong><span>{bootstrapMessage}。已成功加载的模块仍可使用。</span>{Boolean(data?.bootstrap_errors?.length) && <small>{data?.bootstrap_errors?.map((item) => `${item.source}: ${item.message}`).join("；")}</small>}</div><button className="secondary" onClick={() => void load()} disabled={loadingData}>{loadingData ? "正在重试" : "重新加载"}</button></section>}
 
@@ -239,9 +240,9 @@ export default function Home() {
         </section>}
       </div>}
 
-      {view === "conversations" && <ConversationCenter conversations={data?.conversations || []} employees={data?.employees || []} feedback={data?.conversation_feedback || []} request={request} onReload={load} notify={notify} onContinue={(conversation) => { setEmployeeId(conversation.employee_id); setConversationId(conversation.id); setQuestion(""); setExecution(null); setView("agent"); notify("已载入会话，可继续追问"); }}/>} 
+      {view === "conversations" && <ConversationCenter conversations={data?.conversations || []} employees={data?.employees || []} feedback={data?.conversation_feedback || []} request={request} onReload={load} notify={notify} onContinue={(conversation) => { setEmployeeId(conversation.employee_id); setConversationId(conversation.id); setQuestion(""); setExecution(null); setView("agent"); notify("已载入会话，可继续追问"); }}/>}
 
-      {view === "knowledge" && <KnowledgeCenter documents={data?.knowledge_documents || []} stats={data?.knowledge_stats || { total: 0, active: 0, review: 0, failed: 0, indexed: 0, chunks: 0, categories: 0, characters: 0 }} importJobs={data?.knowledge_import_jobs || []} runtime={data?.knowledge_runtime || { documents: 0, active_documents: 0, indexed_documents: 0, chunks: 0, embedding: { provider: "local-hash", model: "local-chinese-ngram-v1", configured: true } }} request={request} onReload={load} notify={notify}/>} 
+      {view === "knowledge" && <KnowledgeCenter documents={data?.knowledge_documents || []} stats={data?.knowledge_stats || { total: 0, active: 0, review: 0, failed: 0, indexed: 0, chunks: 0, categories: 0, characters: 0 }} importJobs={data?.knowledge_import_jobs || []} runtime={data?.knowledge_runtime || { documents: 0, active_documents: 0, indexed_documents: 0, chunks: 0, embedding: { provider: "local-hash", model: "local-chinese-ngram-v1", configured: true } }} request={request} onReload={load} notify={notify}/>}
 
       {view === "plans" && <div className="page"><div className="page-heading"><div><h1>Plan 可视化编排</h1><p>拖动节点调整顺序，配置能力、条件分支、依赖关系和失败重试。</p></div><div className="heading-actions"><button className="secondary" onClick={addPlanNode}>＋ 新增节点</button><button className="primary compact" onClick={savePlan}>保存并生效</button></div></div>{planDraft && <div className="builder-layout"><section className="panel plan-canvas"><div className="canvas-head"><input value={planDraft.name} onChange={(event) => setPlanDraft({ ...planDraft, name: event.target.value })}/><Badge tone="green">{planDraft.nodes.length} 节点</Badge></div><div className="node-track">{planDraft.nodes.map((node, index) => <article key={node.id} draggable onDragStart={() => setDraggedNode(node.id)} onDragOver={(event) => event.preventDefault()} onDrop={() => dropNode(node.id)} onClick={() => setSelectedNode(node.id)} className={`flow-node ${selectedNode === node.id ? "selected" : ""}`}><span className={`node-kind ${node.kind}`}>{node.kind === "tool" ? "T" : "S"}</span><div><small>{index + 1} · {conditionNames[node.condition]}</small><strong>{node.capability_id}</strong><p>{node.goal}</p><div className="node-tags"><em>重试 {node.retry}</em>{node.depends_on.map((dep) => <em key={dep}>← {dep}</em>)}</div></div><span className="drag">⋮⋮</span></article>)}</div></section><aside className="panel node-editor">{selectedPlanNode ? <><div className="editor-title"><div><span className={`node-kind ${selectedPlanNode.kind}`}>{selectedPlanNode.kind === "tool" ? "T" : "S"}</span><div><strong>{selectedPlanNode.id}</strong><small>节点配置</small></div></div><button className="danger-link" onClick={() => { setPlanDraft({ ...planDraft, nodes: planDraft.nodes.filter((node) => node.id !== selectedPlanNode.id).map((node) => ({ ...node, depends_on: node.depends_on.filter((dep) => dep !== selectedPlanNode.id) })) }); setSelectedNode(null); }}>删除</button></div><label>节点 ID<input value={selectedPlanNode.id} disabled/></label><label>能力类型<select value={selectedPlanNode.kind} onChange={(event) => { const kind = event.target.value as "skill" | "tool"; updateNode({ kind, capability_id: capabilities[kind][0]?.id || "" }); }}><option value="skill">Skill</option><option value="tool">Tool</option></select></label><label>绑定能力<select value={selectedPlanNode.capability_id} onChange={(event) => updateNode({ capability_id: event.target.value })}>{capabilities[selectedPlanNode.kind].map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label><label>执行条件<select value={selectedPlanNode.condition} onChange={(event) => updateNode({ condition: event.target.value })}>{conditions.map((item) => <option key={item} value={item}>{conditionNames[item]}</option>)}</select></label><label>失败重试<input type="number" min="0" max="3" value={selectedPlanNode.retry} onChange={(event) => updateNode({ retry: Number(event.target.value) })}/></label><label>目标说明<textarea value={selectedPlanNode.goal} onChange={(event) => updateNode({ goal: event.target.value })}/></label><fieldset><legend>依赖节点</legend>{planDraft.nodes.filter((node) => node.id !== selectedPlanNode.id).map((node) => <label className="check" key={node.id}><input type="checkbox" checked={selectedPlanNode.depends_on.includes(node.id)} onChange={(event) => updateNode({ depends_on: event.target.checked ? [...selectedPlanNode.depends_on, node.id] : selectedPlanNode.depends_on.filter((dep) => dep !== node.id) })}/>{node.id}</label>)}</fieldset></> : <div className="empty-state">选择一个节点进行配置</div>}</aside></div>}</div>}
 
@@ -275,11 +276,10 @@ export default function Home() {
       {view === "logs" && <div className="page"><div className="page-heading"><div><h1>执行日志</h1><p>查看 Agent 历史执行、失败原因、实际模型和风险结果。</p></div><Badge>{data?.logs.length || 0} 条日志</Badge></div><section className="panel log-table"><div className="log-row log-head"><span>Run ID</span><span>问题</span><span>状态 / 模型</span><span>风险</span><span>时间</span><span>操作</span></div>{data?.logs.map((log) => <div className="log-row" key={log.id}><code>{log.id}</code><span>{log.employee?.name || log.employee_id || "未知员工"}<small>{log.question}</small></span><span><Badge tone={log.status === "success" ? "green" : log.status === "error" || log.status === "blocked" ? "red" : "purple"}>{log.status || log.mode}</Badge><small>{log.model || log.provider || log.mode}</small></span><Badge tone={log.risk_review?.risk_level === "critical" || log.risk_review?.risk_level === "high" ? "red" : log.risk_review?.risk_level === "medium" ? "orange" : "green"}>{log.risk_review?.risk_level || "unknown"}</Badge><span>{new Date(log.created_at).toLocaleString("zh-CN")}</span><div className="log-actions"><Link className="text-button" href={`/runs/${log.id}`}>详情</Link><button className="text-button" onClick={async () => { const result = await request(`/runs/${log.id}/retry`, { method: "POST" }); setExecution(result); await load(); setView("agent"); }}>重跑</button></div></div>)}</section></div>}
 
       {view === "config" && <div className="page narrow"><div className="page-heading"><div><h1>配置中心</h1><p>统一管理 OpenAI-Compatible 与显式 Fixture 运行状态；密钥永不返回网页。</p></div></div><div className="config-grid"><section className="panel config-card full llm-config-card"><div className="config-title"><span className="config-icon">AI</span><div><h2>统一 LLM Provider</h2><p>真实模式兼容 OpenAI、DeepSeek 和其他 /chat/completions 服务；演示模式使用同一 Agent 主链路。</p></div><Badge tone={data?.llm.configured ? "green" : "orange"}>{data?.llm.mode === "fixture" ? "Fixture 演示" : data?.llm.configured ? "真实模型" : "未配置"}</Badge></div><div className="llm-runtime-grid"><div><span>Provider</span><strong>{data?.llm.provider || "unconfigured"}</strong></div><div><span>实际模型</span><strong>{data?.llm.model || "未设置"}</strong></div><div><span>API 地址</span><code>{data?.llm.endpoint || "未设置"}</code></div><div><span>运行模式</span><strong>{data?.llm.mode || "unconfigured"}</strong></div></div><div className="llm-actions"><button className="primary compact" disabled={llmTesting} onClick={testLlm}>{llmTesting ? "正在测试…" : "测试 Provider"}</button><small>真实模型设置 LLM_PROVIDER=openai-compatible；演示设置 LLM_PROVIDER=classroom-fixture。切换后请重启。</small></div>{llmTestResult && <div className={`llm-test-result ${llmTestResult.ok ? "success" : "failed"}`}><strong>{llmTestResult.ok ? "Provider 可用" : "Provider 不可用"}</strong><JsonBlock value={llmTestResult}/></div>}</section><section className="panel config-card"><span className="config-icon">↓</span><h2>导出配置</h2><p>生成可迁移 JSON，包含全部编排和能力配置，不包含环境变量值和测试历史。</p><button className="primary compact" onClick={exportConfig}>下载配置 JSON</button></section><section className="panel config-card"><span className="config-icon">↑</span><h2>导入配置</h2><p>导入前会校验格式、ID 唯一性和敏感字段，成功后立即写入本地 JSON。</p><input ref={importRef} className="hidden-input" type="file" accept="application/json" onChange={(event) => importConfig(event.target.files?.[0])}/><button className="secondary wide" onClick={() => importRef.current?.click()}>选择配置文件</button></section><section className="panel config-card full"><span className="config-icon">▣</span><h2>Windows 一键运行</h2><p>项目已包含双击启动脚本和本地分发打包脚本。大模型与 Coze Token 均只由本机后端读取。</p><div className="code-note">OpenAI：LLM_BASE_URL=https://api.openai.com/v1<br/>DeepSeek：LLM_BASE_URL=https://api.deepseek.com<br/>通用路径：LLM_API_PATH=/chat/completions</div></section></div></div>}
-      {view === "evaluations" && <EvaluationCenter coreCases={data?.evaluation_cases || []} badCases={data?.bad_case_evaluation_cases || []} runs={data?.evaluation_runs || []} onReload={load} notify={notify}/>} 
+      {view === "evaluations" && <EvaluationCenter coreCases={data?.evaluation_cases || []} badCases={data?.bad_case_evaluation_cases || []} runs={data?.evaluation_runs || []} onReload={load} notify={notify}/>}
 
-      {view === "analytics" && data?.analytics && <AnalyticsDashboard analytics={data.analytics} request={request} onReload={load} notify={notify}/>} 
+      {view === "analytics" && data?.analytics && <AnalyticsDashboard analytics={data.analytics} request={request} onReload={load} notify={notify}/>}
 
-      {view === "handoffs" && <div className="page"><div className="page-heading"><div><h1>人工转接</h1><p>高风险薪资、合同、社保、权限与争议问题自动进入处理队列。</p></div><Badge tone="orange">{data?.handoffs.filter((item) => item.status !== "resolved").length || 0} 待处理</Badge></div><section className="panel handoff-list">{data?.handoffs.length ? data.handoffs.map((item) => <article className="handoff-row" key={item.id}><div><div className="handoff-title"><code>{item.id}</code><Badge tone={item.risk_level === "critical" || item.risk_level === "high" ? "red" : "orange"}>{riskLabel(item.risk_level)}</Badge><Badge tone={item.status === "resolved" ? "green" : "purple"}>{item.status}</Badge></div><strong>{item.summary}</strong><p>{item.question}</p><small>转交：{item.assigned_to} · {item.reason}</small></div><select value={item.status} onChange={async (event) => { await request(`/handoffs/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: event.target.value }) }); await load(); notify("转接状态已更新"); }}><option value="open">待处理</option><option value="processing">处理中</option><option value="resolved">已解决</option></select></article>) : <div className="empty-state">暂无需要人工转接的问题</div>}</section></div>}
       {view === "config" && <div className="page narrow security-extension"><section className="panel config-card full"><span className="config-icon">盾</span><h2>权限与数据安全</h2><p>当前本地版执行本人数据隔离、敏感字段写入脱敏、高风险自动转人工，并禁止前端获取任何 API Key。</p><div className="security-rules">{data?.access_policies.map((policy) => <article key={policy.id}><strong>{policy.id}</strong><span>{policy.description}</span></article>)}</div><div className="code-note">Planner：模型候选 Plan → 能力白名单 → 依赖补全 → Coze 限制 → 强制风险审核<br/>日志：Token / API Key / 身份证号 / 银行卡号 / 密码 / 验证码自动脱敏</div></section></div>}
     </section>
     {toast && <div className="toast">{toast}</div>}
