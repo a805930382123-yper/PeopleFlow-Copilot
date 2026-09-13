@@ -9,12 +9,14 @@ async function render(pathname = "/") {
   return worker.fetch(new Request(`http://localhost${pathname}`, { headers: { accept: "text/html" } }), { ASSETS: { fetch: async () => new Response("Not found", { status: 404 }) } }, { waitUntil() {}, passThroughOnException() {} });
 }
 
-test("server-renders the employee workspace with three product entry points", async () => {
+test("server-renders the employee workspace with a single demo-role dropdown", async () => {
   const response = await render();
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /PeopleFlow/);
+  assert.match(html, /<select[^>]*aria-label="切换演示角色"/);
+  assert.doesNotMatch(html, /class="workspace-switch"/);
   assert.match(html, /员工端/);
   assert.match(html, /企业管理端/);
   assert.match(html, /高级配置/);
